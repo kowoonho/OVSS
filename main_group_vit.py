@@ -48,6 +48,8 @@ from segmentation.evaluation import build_seg_dataloader, build_seg_dataset, bui
 from timm.utils import AverageMeter, accuracy
 from utils import (auto_resume_helper, build_dataset_class_tokens, build_optimizer, build_scheduler, data2cuda,
                    get_config, get_grad_norm, get_logger, load_checkpoint, parse_losses, reduce_tensor, save_checkpoint)
+from metric.evaluate import evalutate
+
 
 try:
     # noinspection PyUnresolvedReferences
@@ -99,6 +101,7 @@ def train(cfg):
         wandb = None
     # waiting wandb init
     dist.barrier()
+    
     dataset_train, dataset_val, \
         data_loader_train, data_loader_val = build_loader(cfg.data)
     data_loader_seg = build_seg_dataloader(build_seg_dataset(cfg.evaluate.seg))
@@ -106,6 +109,7 @@ def train(cfg):
     logger = get_logger()
 
     logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
+    
     model = build_model(cfg.model)
     model.cuda()
     logger.info(str(model))
@@ -382,7 +386,11 @@ def validate_seg(config, data_loader, model):
         efficient_test=False,
         pre_eval=True,
         format_only=False)
-
+    print()
+    
+    ret_metric = evalutate(results)
+    print(ret_metric)
+    
     if dist.get_rank() == 0:
         metric = [data_loader.dataset.evaluate(results, metric='mIoU')]
     else:

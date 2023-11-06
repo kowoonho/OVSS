@@ -30,7 +30,7 @@ try:
     from apex import amp
 except ImportError:
     amp = None
-
+import numpy as np
 
 def parse_args():
     parser = argparse.ArgumentParser('GroupViT segmentation evaluation and visualization')
@@ -69,7 +69,6 @@ def parse_args():
     args = parser.parse_args()
 
     return args
-
 
 def inference(cfg):
     logger = get_logger()
@@ -127,7 +126,6 @@ def vis_seg(config, data_loader, model, vis_modes):
     for batch_indices, data in zip(loader_indices, data_loader):
         with torch.no_grad():
             result = mmddp_model(return_loss=False, **data)
-
         img_tensor = data['img'][0]
         img_metas = data['img_metas'][0].data[0]
         imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
@@ -139,7 +137,6 @@ def vis_seg(config, data_loader, model, vis_modes):
 
             ori_h, ori_w = img_meta['ori_shape'][:-1]
             img_show = mmcv.imresize(img_show, (ori_w, ori_h))
-
             for vis_mode in vis_modes:
                 out_file = osp.join(config.output, 'vis_imgs', vis_mode, f'{batch_idx:04d}.jpg')
                 model.show_result(img_show, img_tensor.to(device), result, out_file, vis_mode)

@@ -42,7 +42,7 @@ def parse_args():
         nargs='+',
     )
 
-    parser.add_argument('--resume', default="../../Dataset/pre-trained_weights/groupvit/group_vit_gcc_yfcc_30e-879422e0.pth",help='resume from checkpoint')
+    parser.add_argument('--resume', default="/workspace/Dataset/pre-trained_weights/groupvit/group_vit_gcc_yfcc_30e-879422e0.pth",help='resume from checkpoint')
     parser.add_argument(
         '--vis',
         help='Specify the visualization mode, '

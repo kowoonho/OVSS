@@ -57,10 +57,10 @@ train:
   start_epoch: 0
   epochs: 30
   warmup_epochs: 2
-  base_lr: 0.0016
+  base_lr: 0.0001
   weight_decay: 0.05
-  warmup_lr: 4.0e-06
-  min_lr: 4.0e-05
+  warmup_lr: 2.5e-07
+  min_lr: 2.5e-06
   clip_grad: 5.0
   accumulation_steps: 0
   amp_opt_level: O1
@@ -74,7 +74,7 @@ train:
     - 0.9
     - 0.999
 evaluate:
-  eval_only: true
+  eval_only: false
   eval_freq: 1
   task:
   - cls
@@ -89,7 +89,7 @@ evaluate:
     opts: []
 checkpoint:
   auto_resume: true
-  resume: /workspace/Dataset/pre-trained_weights/groupvit/group_vit_gcc_yfcc_30e-879422e0.pth
+  resume: ''
   freq: 1
   max_kept: -1
   save_freq: 1
