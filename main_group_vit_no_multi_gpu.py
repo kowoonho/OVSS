@@ -101,7 +101,8 @@ def train(cfg):
         wandb = None
     # waiting wandb init
     dist.barrier()
-    
+    print('Current cuda device:', torch.cuda.current_device())
+    exit()
     
     dataset_train, dataset_val, \
         data_loader_train, data_loader_val = build_loader(cfg.data)
@@ -388,7 +389,7 @@ def validate_seg(config, data_loader, model):
         efficient_test=False,
         pre_eval=True,
         format_only=False)
-
+    print()
     
     ret_metric = evalutate(results)
     print(ret_metric)

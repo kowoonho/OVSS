@@ -59,15 +59,18 @@ def build_loader(config):
     local_rank = dist.get_rank() % torch.cuda.device_count() if dist.is_initialized() else 0
 
     dataset_train = build_dataset(is_train=True, config=config)
+    
     print(f'local rank {local_rank} / global rank {dist.get_rank()} \
         successfully build train dataset')
+    
     dataset_val = build_dataset(is_train=False, config=config)
     print(f'local rank {local_rank} / global rank {dist.get_rank()} \
         successfully build val dataset')
-
+    
     dc_collate = partial(collate, samples_per_gpu=config.batch_size)
-    train_len = len(dataset_train)
     init_fn = partial(worker_init_fn, num_workers=config.num_workers, rank=dist.get_rank(), seed=config.seed)
+    
+    # train loader
     data_loader_train = wds.WebLoader(
         dataset_train.batched(config.batch_size, dc_collate, partial=False),
         batch_size=None,
@@ -77,9 +80,11 @@ def build_loader(config):
         persistent_workers=config.num_workers > 0,
         worker_init_fn=init_fn)
 
+    train_len = len(dataset_train)
     train_nbatches = max(1, train_len // (config.batch_size * dist.get_world_size()))
     data_loader_train = (data_loader_train.with_epoch(train_nbatches).with_length(train_nbatches))
-
+    
+    # validation loader    
     data_loader_val = wds.WebLoader(
         dataset_val.batched(config.batch_size, dc_collate),
         batch_size=None,
