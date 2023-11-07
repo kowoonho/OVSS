@@ -1,7 +1,7 @@
 data:
   batch_size: 256
   pin_memory: true
-  num_workers: 6
+  num_workers: 4
   shuffle_buffer: 10000
   seed: ${train.seed}
   dataset:
@@ -23,7 +23,6 @@ data:
         length: 50000
     train:
     - gcc3m
-    - gcc12m
     val:
     - imagenet
   img_aug:

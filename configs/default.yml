@@ -1,7 +1,7 @@
 data:
   batch_size: 256
   pin_memory: true
-  num_workers: 6
+  num_workers: 2
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -35,7 +35,7 @@ data:
         length: 50000
     train:
       - gcc3m
-      - gcc12m
+      # - gcc12m
       # - yfcc14m
     val:
       - imagenet
