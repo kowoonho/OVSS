@@ -1,0 +1,1984 @@
+[2023-11-07 13:37:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 443): INFO Scale base_lr from 0.0016 to 6.25e-06
+[2023-11-07 13:37:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 444): INFO Scale warmup_lr from 4e-06 to 1.5625e-08
+[2023-11-07 13:37:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 445): INFO Scale min_lr from 4e-05 to 1.5625e-07
+[2023-11-07 13:37:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 453): INFO Full config saved to output/group_vit_gcc_yfcc_30e_bs16x1/config.json
+[2023-11-07 13:37:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 459): INFO Environment info:
+------------------------------------------------------------
+sys.platform: linux
+Python: 3.7.16 (default, Jan 17 2023, 22:20:44) [GCC 11.2.0]
+CUDA available: True
+GPU 0: NVIDIA GeForce RTX 3090
+CUDA_HOME: /usr/local/cuda
+NVCC: Build cuda_11.1.TC455_06.29190527_0
+GCC: gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+PyTorch: 1.8.0+cu111
+PyTorch compiling details: PyTorch built with:
+  - GCC 7.3
+  - C++ Version: 201402
+  - Intel(R) Math Kernel Library Version 2020.0.0 Product Build 20191122 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v1.7.0 (Git Hash 7aed236906b1f7a05c0917e5257a1af05e9ff683)
+  - OpenMP 201511 (a.k.a. OpenMP 4.5)
+  - NNPACK is enabled
+  - CPU capability usage: AVX2
+  - CUDA Runtime 11.1
+  - NVCC architecture flags: -gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_80,code=sm_80;-gencode;arch=compute_86,code=sm_86
+  - CuDNN 8.0.5
+  - Magma 2.5.2
+  - Build settings: BLAS_INFO=mkl, BUILD_TYPE=Release, CUDA_VERSION=11.1, CUDNN_VERSION=8.0.5, CXX_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/c++, CXX_FLAGS= -Wno-deprecated -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -fopenmp -DNDEBUG -DUSE_KINETO -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -DUSE_XNNPACK -O2 -fPIC -Wno-narrowing -Wall -Wextra -Werror=return-type -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-unused-local-typedefs -Wno-strict-overflow -Wno-strict-aliasing -Wno-error=deprecated-declarations -Wno-stringop-overflow -Wno-psabi -Wno-error=pedantic -Wno-error=redundant-decls -Wno-error=old-style-cast -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Werror=format -Wno-stringop-overflow, LAPACK_INFO=mkl, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, TORCH_VERSION=1.8.0, USE_CUDA=ON, USE_CUDNN=ON, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=ON, USE_MPI=OFF, USE_NCCL=ON, USE_NNPACK=ON, USE_OPENMP=ON, 
+
+TorchVision: 0.9.0+cu111
+OpenCV: 4.4.0
+MMCV: 1.3.14
+MMCV Compiler: GCC 7.3
+MMCV CUDA Compiler: 11.1
+------------------------------------------------------------
+
+[2023-11-07 13:37:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 461): INFO Git hash: acd8aa3
+[2023-11-07 13:37:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 464): INFO data:
+  batch_size: 16
+  pin_memory: true
+  num_workers: 0
+  shuffle_buffer: 10000
+  seed: ${train.seed}
+  dataset:
+    meta:
+      gcc3m:
+        type: img_txt_pair
+        path: /workspace/Dataset/local_data/gcc3m_shards
+        prefix: gcc-train-{000000..000331}.tar
+        length: 2891445
+      gcc12m:
+        type: img_txt_pair
+        path: /workspace/Dataset/local_data/gcc12m_shards
+        prefix: gcc-conceptual-12m-{000000..001242}.tar
+        length: 11156203
+      imagenet:
+        type: img_cls_pair
+        path: /workspace/Dataset/local_data/imagenet_shards
+        prefix: imagenet-val-{000000..000009}.tar
+        length: 50000
+    train:
+    - gcc3m
+    val:
+    - imagenet
+  img_aug:
+    deit_aug: true
+    img_size: 224
+    img_scale:
+    - 0.08
+    - 1.0
+    interpolation: bilinear
+    color_jitter: 0.4
+    auto_augment: rand-m9-mstd0.5-inc1
+    re_prob: 0.25
+    re_mode: pixel
+    re_count: 1
+  text_aug:
+    max_seq_len: 77
+    multi_label: 3
+    word_type: noun
+train:
+  start_epoch: 0
+  epochs: 30
+  warmup_epochs: 2
+  base_lr: 6.25e-06
+  weight_decay: 0.05
+  warmup_lr: 1.5625e-08
+  min_lr: 1.5625e-07
+  clip_grad: 5.0
+  accumulation_steps: 0
+  amp_opt_level: O1
+  seed: 0
+  lr_scheduler:
+    name: cosine
+  optimizer:
+    name: adamw
+    eps: 1.0e-08
+    betas:
+    - 0.9
+    - 0.999
+evaluate:
+  eval_only: false
+  eval_freq: 1
+  task:
+  - cls
+  - seg
+  cls:
+    save_best: true
+    template: subset
+  seg:
+    save_best: true
+    cfg: segmentation/configs/_base_/datasets/pascal_voc12.py
+    template: simple
+    opts: []
+checkpoint:
+  auto_resume: true
+  resume: ''
+  freq: 1
+  max_kept: -1
+  save_freq: 1
+model_name: group_vit_gcc_yfcc_30e_bs16x1
+output: output/group_vit_gcc_yfcc_30e_bs16x1
+tag: default
+print_freq: 10
+seed: 0
+wandb: true
+local_rank: 0
+vis: []
+_base_: default.yml
+model:
+  type: MultiLabelContrastive
+  img_encoder:
+    type: GroupViT
+    embed_dim: 384
+    num_heads:
+    - 6
+    - 6
+    - 6
+    depths:
+    - 6
+    - 3
+    - 3
+    num_group_tokens:
+    - 64
+    - 8
+    - 0
+    num_output_groups:
+    - 64
+    - 8
+    drop_rate: 0.0
+    drop_path_rate: 0.1
+  text_encoder:
+    type: TextTransformer
+    context_length: 77
+    width: 256
+    layers: 12
+    vocab_size: 49408
+  contrast_temperature: 0.07
+  proj_num_layers: 2
+  output_dim: 256
+  multi_label: ${data.text_aug.multi_label}
+
+[2023-11-07 13:37:04 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 112): INFO Creating model:MultiLabelContrastive/group_vit_gcc_yfcc_30e_bs16x1
+[2023-11-07 13:37:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 117): INFO MultiLabelContrastive(
+  (img_encoder): GroupViT(
+    (patch_embed): PatchEmbed(
+      (proj): Conv2d(3, 384, kernel_size=(16, 16), stride=(16, 16))
+      (norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+    )
+    (avgpool): AdaptiveAvgPool1d(output_size=1)
+    (pos_drop): Dropout(p=0.0, inplace=False)
+    (layers): ModuleList(
+      (0): GroupingLayer(
+        dim=384, 
+        input_resolution=196, 
+        depth=6, 
+        num_group_token=64, 
+        
+        (blocks): ModuleList(
+          (0): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): Identity()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (1): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (2): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (3): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (4): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (5): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+        )
+        (downsample): GroupingBlock(
+          hard=True, 
+          gumbel=True, 
+          sum_assign=False, 
+          num_output_group=64, 
+           
+          (norm_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_inter): Mlp(
+            (fc1): Linear(in_features=64, out_features=192, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=192, out_features=64, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_post_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (norm_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (pre_assign_attn): CrossAttnBlock(
+            (norm_post): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (norm_q): Identity()
+            (norm_k): Identity()
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=False
+              (q_proj): Linear(in_features=384, out_features=384, bias=True)
+              (k_proj): Linear(in_features=384, out_features=384, bias=True)
+              (v_proj): Linear(in_features=384, out_features=384, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): Identity()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (assign): AssignAttention(
+            num_heads: 1, 
+            hard: True, 
+            gumbel: True, 
+            sum_assign=False, 
+            gumbel_tau: 1.0, 
+            assign_eps: 1.0
+            (q_proj): Linear(in_features=384, out_features=384, bias=True)
+            (k_proj): Linear(in_features=384, out_features=384, bias=True)
+            (v_proj): Linear(in_features=384, out_features=384, bias=True)
+            (attn_drop): Dropout(p=0.0, inplace=False)
+            (proj): Linear(in_features=384, out_features=384, bias=True)
+            (proj_drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_new_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_channels): Mlp(
+            (fc1): Linear(in_features=384, out_features=1536, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=1536, out_features=384, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (reduction): Identity()
+        )
+      )
+      (1): GroupingLayer(
+        dim=384, 
+        input_resolution=64, 
+        depth=3, 
+        num_group_token=8, 
+        
+        (blocks): ModuleList(
+          (0): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (1): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (2): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+        )
+        (downsample): GroupingBlock(
+          hard=True, 
+          gumbel=True, 
+          sum_assign=False, 
+          num_output_group=8, 
+           
+          (norm_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_inter): Mlp(
+            (fc1): Linear(in_features=8, out_features=192, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=192, out_features=8, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_post_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (norm_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (pre_assign_attn): CrossAttnBlock(
+            (norm_post): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (norm_q): Identity()
+            (norm_k): Identity()
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=False
+              (q_proj): Linear(in_features=384, out_features=384, bias=True)
+              (k_proj): Linear(in_features=384, out_features=384, bias=True)
+              (v_proj): Linear(in_features=384, out_features=384, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): Identity()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (assign): AssignAttention(
+            num_heads: 1, 
+            hard: True, 
+            gumbel: True, 
+            sum_assign=False, 
+            gumbel_tau: 1.0, 
+            assign_eps: 1.0
+            (q_proj): Linear(in_features=384, out_features=384, bias=True)
+            (k_proj): Linear(in_features=384, out_features=384, bias=True)
+            (v_proj): Linear(in_features=384, out_features=384, bias=True)
+            (attn_drop): Dropout(p=0.0, inplace=False)
+            (proj): Linear(in_features=384, out_features=384, bias=True)
+            (proj_drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_new_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_channels): Mlp(
+            (fc1): Linear(in_features=384, out_features=1536, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=1536, out_features=384, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (reduction): Identity()
+        )
+        (group_projector): Sequential(
+          (0): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (1): MixerMlp(
+            (fc1): Linear(in_features=64, out_features=192, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=192, out_features=8, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+        )
+      )
+      (2): GroupingLayer(
+        dim=384, 
+        input_resolution=8, 
+        depth=3, 
+        num_group_token=0, 
+        
+        (blocks): ModuleList(
+          (0): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (1): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (2): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+        )
+      )
+    )
+    (norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+    (head): Identity()
+  )
+  (text_encoder): TextTransformer(
+    (transformer): Transformer(
+      (resblocks): Sequential(
+        (0): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (1): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (2): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (3): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (4): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (5): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (6): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (7): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (8): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (9): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (10): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (11): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+    )
+    (ln_final): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+    (token_embedding): Embedding(49408, 256)
+  )
+  (cross_entropy): CrossEntropyLoss()
+  (soft_cross_entropy): SoftTargetCrossEntropy()
+  (img_projector): ProjectMLP(
+    (linear_hidden): Sequential(
+      (0): Conv1d(384, 4096, kernel_size=(1,), stride=(1,))
+      (1): SyncBatchNorm(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+    )
+    (linear_out): Conv1d(4096, 256, kernel_size=(1,), stride=(1,))
+  )
+  (text_projector): ProjectMLP(
+    (linear_hidden): Sequential(
+      (0): Conv1d(256, 4096, kernel_size=(1,), stride=(1,))
+      (1): SyncBatchNorm(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+    )
+    (linear_out): Conv1d(4096, 256, kernel_size=(1,), stride=(1,))
+  )
+)
+[2023-11-07 13:37:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 126): INFO number of params: 55726610
+[2023-11-07 13:37:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 138): INFO no checkpoint found in output/group_vit_gcc_yfcc_30e_bs16x1, ignoring auto resume
+[2023-11-07 13:37:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 155): INFO Start training
+[2023-11-07 13:37:06 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][0/180715]	eta 1 day, 13:09:59 lr 0.000000	time 0.7404 (0.7404)	total_loss 6.1724 (6.1724)	loss 2.7364 (2.7364)	multi_label_loss 3.4360 (3.4360)	grad_norm inf (inf)	mem 4960MB
+[2023-11-07 13:37:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][10/180715]	eta 12:36:20 lr 0.000000	time 0.2043 (0.2511)	total_loss 6.6043 (6.4456)	loss 3.0063 (2.9347)	multi_label_loss 3.5981 (3.5110)	grad_norm 85.5484 (inf)	mem 4960MB
+[2023-11-07 13:37:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][20/180715]	eta 11:40:50 lr 0.000000	time 0.2126 (0.2327)	total_loss 6.4823 (6.4739)	loss 2.8654 (2.9516)	multi_label_loss 3.6168 (3.5223)	grad_norm 88.1374 (inf)	mem 4960MB
+[2023-11-07 13:37:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][30/180715]	eta 11:24:56 lr 0.000000	time 0.2185 (0.2274)	total_loss 6.6263 (6.4906)	loss 3.0473 (2.9524)	multi_label_loss 3.5790 (3.5381)	grad_norm 81.1481 (inf)	mem 4960MB
+[2023-11-07 13:37:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][40/180715]	eta 11:15:42 lr 0.000000	time 0.2090 (0.2244)	total_loss 6.4991 (6.5041)	loss 2.8479 (2.9555)	multi_label_loss 3.6511 (3.5486)	grad_norm 91.8626 (inf)	mem 4960MB
+[2023-11-07 13:37:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][50/180715]	eta 11:11:25 lr 0.000000	time 0.2050 (0.2230)	total_loss 6.6903 (6.5154)	loss 2.8898 (2.9536)	multi_label_loss 3.8005 (3.5618)	grad_norm 83.3707 (inf)	mem 4960MB
+[2023-11-07 13:37:19 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][60/180715]	eta 11:09:35 lr 0.000000	time 0.2067 (0.2224)	total_loss 6.4208 (6.5213)	loss 2.9699 (2.9663)	multi_label_loss 3.4509 (3.5550)	grad_norm 85.8602 (inf)	mem 4960MB
+[2023-11-07 13:37:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][70/180715]	eta 11:06:14 lr 0.000000	time 0.2419 (0.2213)	total_loss 6.5255 (6.5260)	loss 3.0298 (2.9696)	multi_label_loss 3.4957 (3.5564)	grad_norm 92.9121 (inf)	mem 4960MB
+[2023-11-07 13:37:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][80/180715]	eta 11:05:38 lr 0.000000	time 0.2096 (0.2211)	total_loss 6.3343 (6.5220)	loss 2.8634 (2.9711)	multi_label_loss 3.4709 (3.5509)	grad_norm 84.7689 (inf)	mem 4960MB
+[2023-11-07 13:37:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][90/180715]	eta 11:05:07 lr 0.000000	time 0.2189 (0.2209)	total_loss 6.6834 (6.5294)	loss 3.1995 (2.9742)	multi_label_loss 3.4839 (3.5552)	grad_norm 85.6852 (inf)	mem 4960MB
+[2023-11-07 13:37:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][100/180715]	eta 11:07:46 lr 0.000000	time 0.2276 (0.2218)	total_loss 6.4499 (6.5308)	loss 2.9524 (2.9743)	multi_label_loss 3.4975 (3.5565)	grad_norm 79.8844 (inf)	mem 4960MB
+[2023-11-07 13:37:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][110/180715]	eta 11:06:21 lr 0.000000	time 0.2180 (0.2214)	total_loss 6.0817 (6.5269)	loss 2.7965 (2.9745)	multi_label_loss 3.2852 (3.5524)	grad_norm 81.3923 (inf)	mem 4960MB
+[2023-11-07 13:37:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][120/180715]	eta 11:04:44 lr 0.000000	time 0.2094 (0.2208)	total_loss 6.8088 (6.5203)	loss 3.1239 (2.9708)	multi_label_loss 3.6848 (3.5495)	grad_norm 95.3291 (inf)	mem 4960MB
+[2023-11-07 13:37:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][130/180715]	eta 11:09:25 lr 0.000000	time 0.2235 (0.2224)	total_loss 6.7935 (6.5273)	loss 3.2286 (2.9771)	multi_label_loss 3.5649 (3.5502)	grad_norm 84.9563 (inf)	mem 4960MB
+[2023-11-07 13:37:36 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][140/180715]	eta 11:10:04 lr 0.000000	time 0.2430 (0.2226)	total_loss 6.3748 (6.5248)	loss 2.9810 (2.9756)	multi_label_loss 3.3939 (3.5492)	grad_norm 91.2115 (inf)	mem 4960MB
+[2023-11-07 13:37:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][150/180715]	eta 11:11:02 lr 0.000000	time 0.2200 (0.2230)	total_loss 6.7185 (6.5250)	loss 3.0813 (2.9744)	multi_label_loss 3.6371 (3.5507)	grad_norm 84.0071 (inf)	mem 4960MB
+[2023-11-07 13:37:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][160/180715]	eta 11:09:21 lr 0.000000	time 0.2099 (0.2224)	total_loss 6.7055 (6.5179)	loss 2.9167 (2.9682)	multi_label_loss 3.7889 (3.5497)	grad_norm 84.1519 (inf)	mem 4960MB
+[2023-11-07 13:37:43 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][170/180715]	eta 11:09:47 lr 0.000000	time 0.2171 (0.2226)	total_loss 6.6657 (6.5184)	loss 3.0208 (2.9689)	multi_label_loss 3.6449 (3.5496)	grad_norm 91.3073 (inf)	mem 4960MB
+[2023-11-07 13:37:45 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][180/180715]	eta 11:09:29 lr 0.000000	time 0.2097 (0.2225)	total_loss 6.5945 (6.5239)	loss 3.1083 (2.9732)	multi_label_loss 3.4862 (3.5508)	grad_norm 90.9281 (inf)	mem 4960MB
+[2023-11-07 13:37:47 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][190/180715]	eta 11:09:07 lr 0.000000	time 0.2180 (0.2224)	total_loss 6.3394 (6.5245)	loss 2.9045 (2.9737)	multi_label_loss 3.4349 (3.5507)	grad_norm 87.5903 (inf)	mem 4960MB
+[2023-11-07 13:37:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][200/180715]	eta 11:09:13 lr 0.000000	time 0.2190 (0.2224)	total_loss 6.4705 (6.5310)	loss 2.9263 (2.9799)	multi_label_loss 3.5442 (3.5512)	grad_norm 92.7404 (inf)	mem 4960MB
+[2023-11-07 13:37:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][210/180715]	eta 11:09:31 lr 0.000000	time 0.2508 (0.2226)	total_loss 6.3235 (6.5272)	loss 2.8020 (2.9764)	multi_label_loss 3.5215 (3.5507)	grad_norm 80.0397 (inf)	mem 4960MB
+[2023-11-07 13:37:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][220/180715]	eta 11:08:43 lr 0.000000	time 0.2070 (0.2223)	total_loss 6.0691 (6.5243)	loss 2.7205 (2.9752)	multi_label_loss 3.3486 (3.5491)	grad_norm 84.8288 (inf)	mem 4960MB
+[2023-11-07 13:37:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][230/180715]	eta 11:07:04 lr 0.000000	time 0.2105 (0.2218)	total_loss 6.5067 (6.5252)	loss 2.9530 (2.9766)	multi_label_loss 3.5537 (3.5486)	grad_norm 88.5327 (inf)	mem 4960MB
+[2023-11-07 13:37:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][240/180715]	eta 11:06:23 lr 0.000000	time 0.2095 (0.2215)	total_loss 6.8552 (6.5241)	loss 3.1053 (2.9751)	multi_label_loss 3.7500 (3.5490)	grad_norm 84.7163 (inf)	mem 4960MB
+[2023-11-07 13:38:01 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][250/180715]	eta 11:06:30 lr 0.000000	time 0.2122 (0.2216)	total_loss 6.7051 (6.5279)	loss 3.2128 (2.9779)	multi_label_loss 3.4923 (3.5499)	grad_norm 86.5907 (inf)	mem 4960MB
+[2023-11-07 13:38:03 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][260/180715]	eta 11:06:42 lr 0.000000	time 0.2108 (0.2217)	total_loss 6.8632 (6.5320)	loss 3.1485 (2.9815)	multi_label_loss 3.7147 (3.5505)	grad_norm 86.9768 (inf)	mem 4960MB
+[2023-11-07 13:38:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][270/180715]	eta 11:07:04 lr 0.000000	time 0.2136 (0.2218)	total_loss 6.6743 (6.5312)	loss 3.0981 (2.9813)	multi_label_loss 3.5762 (3.5499)	grad_norm 80.8413 (inf)	mem 4960MB
+[2023-11-07 13:38:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][280/180715]	eta 11:06:14 lr 0.000000	time 0.2352 (0.2215)	total_loss 6.3957 (6.5310)	loss 2.8916 (2.9804)	multi_label_loss 3.5040 (3.5506)	grad_norm 82.2550 (inf)	mem 4960MB
+[2023-11-07 13:38:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][290/180715]	eta 11:05:49 lr 0.000000	time 0.2074 (0.2214)	total_loss 6.5675 (6.5302)	loss 3.0498 (2.9793)	multi_label_loss 3.5177 (3.5509)	grad_norm 90.6792 (inf)	mem 4960MB
+[2023-11-07 13:38:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][300/180715]	eta 11:06:07 lr 0.000000	time 0.2476 (0.2215)	total_loss 6.8171 (6.5315)	loss 3.2394 (2.9812)	multi_label_loss 3.5777 (3.5503)	grad_norm 92.7132 (inf)	mem 4960MB
+[2023-11-07 13:38:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][310/180715]	eta 11:06:43 lr 0.000000	time 0.2338 (0.2217)	total_loss 6.5056 (6.5304)	loss 2.9626 (2.9811)	multi_label_loss 3.5430 (3.5492)	grad_norm 87.0623 (inf)	mem 4960MB
+[2023-11-07 13:38:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][320/180715]	eta 11:06:39 lr 0.000000	time 0.2134 (0.2217)	total_loss 6.3645 (6.5291)	loss 2.8460 (2.9795)	multi_label_loss 3.5185 (3.5496)	grad_norm 78.8013 (inf)	mem 4960MB
+[2023-11-07 13:38:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][330/180715]	eta 11:06:00 lr 0.000000	time 0.2165 (0.2215)	total_loss 6.6593 (6.5282)	loss 2.9741 (2.9791)	multi_label_loss 3.6852 (3.5491)	grad_norm 84.0896 (inf)	mem 4960MB
+[2023-11-07 13:38:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][340/180715]	eta 11:04:52 lr 0.000000	time 0.2116 (0.2212)	total_loss 6.5336 (6.5274)	loss 3.0533 (2.9784)	multi_label_loss 3.4803 (3.5491)	grad_norm 85.6966 (inf)	mem 4960MB
+[2023-11-07 13:38:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][350/180715]	eta 11:03:45 lr 0.000000	time 0.1988 (0.2208)	total_loss 6.5411 (6.5291)	loss 3.0853 (2.9802)	multi_label_loss 3.4557 (3.5489)	grad_norm 88.3808 (inf)	mem 4960MB
+[2023-11-07 13:38:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][360/180715]	eta 11:02:45 lr 0.000000	time 0.2148 (0.2205)	total_loss 6.2663 (6.5291)	loss 2.7365 (2.9797)	multi_label_loss 3.5297 (3.5494)	grad_norm 78.0733 (inf)	mem 4960MB
+[2023-11-07 13:38:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][370/180715]	eta 11:02:50 lr 0.000000	time 0.2043 (0.2205)	total_loss 6.2572 (6.5282)	loss 2.6833 (2.9788)	multi_label_loss 3.5740 (3.5495)	grad_norm 79.6265 (inf)	mem 4960MB
+[2023-11-07 13:38:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][380/180715]	eta 11:02:26 lr 0.000000	time 0.2098 (0.2204)	total_loss 6.5321 (6.5252)	loss 2.9738 (2.9771)	multi_label_loss 3.5583 (3.5480)	grad_norm 84.3614 (inf)	mem 4960MB
+[2023-11-07 13:38:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][390/180715]	eta 11:02:39 lr 0.000000	time 0.2086 (0.2205)	total_loss 6.2905 (6.5260)	loss 2.7809 (2.9784)	multi_label_loss 3.5096 (3.5475)	grad_norm 91.5482 (inf)	mem 4960MB
+[2023-11-07 13:38:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][400/180715]	eta 11:02:39 lr 0.000000	time 0.2061 (0.2205)	total_loss 6.4260 (6.5257)	loss 2.8696 (2.9777)	multi_label_loss 3.5564 (3.5480)	grad_norm 80.3679 (inf)	mem 4960MB
+[2023-11-07 13:38:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][410/180715]	eta 11:01:36 lr 0.000000	time 0.2130 (0.2202)	total_loss 6.8608 (6.5251)	loss 3.3516 (2.9770)	multi_label_loss 3.5091 (3.5481)	grad_norm 86.1402 (inf)	mem 4960MB
+[2023-11-07 13:38:38 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][420/180715]	eta 11:01:34 lr 0.000000	time 0.2146 (0.2202)	total_loss 6.3135 (6.5257)	loss 2.7331 (2.9778)	multi_label_loss 3.5804 (3.5479)	grad_norm 80.3795 (inf)	mem 4960MB
+[2023-11-07 13:38:40 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][430/180715]	eta 11:01:15 lr 0.000000	time 0.2135 (0.2201)	total_loss 6.5004 (6.5261)	loss 3.0308 (2.9784)	multi_label_loss 3.4696 (3.5477)	grad_norm 88.7175 (inf)	mem 4960MB
+[2023-11-07 13:38:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][440/180715]	eta 11:01:14 lr 0.000000	time 0.2096 (0.2201)	total_loss 6.6450 (6.5277)	loss 3.0719 (2.9805)	multi_label_loss 3.5730 (3.5472)	grad_norm 88.1222 (inf)	mem 4960MB
+[2023-11-07 13:38:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][450/180715]	eta 11:00:49 lr 0.000000	time 0.2130 (0.2200)	total_loss 6.7517 (6.5256)	loss 3.2318 (2.9791)	multi_label_loss 3.5199 (3.5465)	grad_norm 86.8247 (inf)	mem 4960MB
+[2023-11-07 13:38:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][460/180715]	eta 11:00:49 lr 0.000000	time 0.2088 (0.2200)	total_loss 6.1934 (6.5235)	loss 2.8312 (2.9778)	multi_label_loss 3.3621 (3.5457)	grad_norm 77.7243 (inf)	mem 4960MB
+[2023-11-07 13:38:49 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][470/180715]	eta 11:00:43 lr 0.000000	time 0.2620 (0.2199)	total_loss 6.5237 (6.5237)	loss 2.9434 (2.9781)	multi_label_loss 3.5802 (3.5455)	grad_norm 79.4790 (inf)	mem 4960MB
+[2023-11-07 13:38:51 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][480/180715]	eta 11:00:25 lr 0.000000	time 0.2070 (0.2199)	total_loss 6.5855 (6.5226)	loss 2.9764 (2.9775)	multi_label_loss 3.6092 (3.5451)	grad_norm 85.2745 (inf)	mem 4960MB
+[2023-11-07 13:38:53 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][490/180715]	eta 11:00:32 lr 0.000000	time 0.2032 (0.2199)	total_loss 6.3659 (6.5200)	loss 2.9373 (2.9763)	multi_label_loss 3.4285 (3.5436)	grad_norm 86.1050 (inf)	mem 4960MB
+[2023-11-07 13:38:55 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][500/180715]	eta 11:00:22 lr 0.000000	time 0.2099 (0.2199)	total_loss 6.4703 (6.5187)	loss 2.9358 (2.9759)	multi_label_loss 3.5344 (3.5428)	grad_norm 81.2654 (inf)	mem 4960MB
+[2023-11-07 13:38:57 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][510/180715]	eta 11:00:33 lr 0.000000	time 0.2485 (0.2199)	total_loss 6.3778 (6.5197)	loss 2.9203 (2.9769)	multi_label_loss 3.4575 (3.5428)	grad_norm 84.3505 (inf)	mem 4960MB
+[2023-11-07 13:39:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][520/180715]	eta 11:00:32 lr 0.000000	time 0.2423 (0.2199)	total_loss 6.8190 (6.5186)	loss 3.1854 (2.9758)	multi_label_loss 3.6336 (3.5428)	grad_norm 83.4062 (inf)	mem 4960MB
+[2023-11-07 13:39:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][530/180715]	eta 11:00:08 lr 0.000000	time 0.2171 (0.2198)	total_loss 6.5093 (6.5171)	loss 2.8846 (2.9739)	multi_label_loss 3.6246 (3.5432)	grad_norm 88.5460 (inf)	mem 4960MB
+[2023-11-07 13:39:04 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][540/180715]	eta 11:00:20 lr 0.000000	time 0.2168 (0.2199)	total_loss 6.5084 (6.5179)	loss 2.9350 (2.9747)	multi_label_loss 3.5734 (3.5432)	grad_norm 88.6816 (inf)	mem 4960MB
+[2023-11-07 13:39:06 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][550/180715]	eta 11:00:22 lr 0.000000	time 0.2105 (0.2199)	total_loss 6.2837 (6.5179)	loss 2.6739 (2.9739)	multi_label_loss 3.6098 (3.5440)	grad_norm 90.0737 (inf)	mem 4960MB
+[2023-11-07 13:39:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][560/180715]	eta 10:59:55 lr 0.000000	time 0.2127 (0.2198)	total_loss 6.6444 (6.5178)	loss 3.0030 (2.9738)	multi_label_loss 3.6414 (3.5441)	grad_norm 89.6596 (inf)	mem 4960MB
+[2023-11-07 13:39:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][570/180715]	eta 10:59:19 lr 0.000000	time 0.2063 (0.2196)	total_loss 6.5773 (6.5176)	loss 2.9361 (2.9733)	multi_label_loss 3.6412 (3.5443)	grad_norm 83.7593 (inf)	mem 4960MB
+[2023-11-07 13:39:13 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][580/180715]	eta 10:59:10 lr 0.000000	time 0.2065 (0.2196)	total_loss 6.2752 (6.5173)	loss 2.8642 (2.9730)	multi_label_loss 3.4109 (3.5442)	grad_norm 84.6766 (inf)	mem 4960MB
+[2023-11-07 13:39:15 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][590/180715]	eta 10:58:44 lr 0.000000	time 0.2141 (0.2194)	total_loss 6.4779 (6.5172)	loss 2.8983 (2.9731)	multi_label_loss 3.5796 (3.5441)	grad_norm 88.0117 (inf)	mem 4960MB
+[2023-11-07 13:39:17 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][600/180715]	eta 10:58:33 lr 0.000000	time 0.2080 (0.2194)	total_loss 6.7623 (6.5161)	loss 3.1103 (2.9724)	multi_label_loss 3.6520 (3.5437)	grad_norm 85.2533 (inf)	mem 4960MB
+[2023-11-07 13:39:19 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][610/180715]	eta 10:58:08 lr 0.000000	time 0.2209 (0.2193)	total_loss 6.7422 (6.5155)	loss 3.1120 (2.9721)	multi_label_loss 3.6303 (3.5434)	grad_norm 90.6294 (inf)	mem 4960MB
+[2023-11-07 13:39:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][620/180715]	eta 10:58:06 lr 0.000000	time 0.2108 (0.2193)	total_loss 6.5585 (6.5149)	loss 2.9125 (2.9713)	multi_label_loss 3.6461 (3.5436)	grad_norm 87.0262 (inf)	mem 4960MB
+[2023-11-07 13:39:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][630/180715]	eta 10:57:17 lr 0.000000	time 0.2365 (0.2190)	total_loss 6.5309 (6.5136)	loss 2.8968 (2.9703)	multi_label_loss 3.6341 (3.5433)	grad_norm 78.9806 (inf)	mem 4960MB
+[2023-11-07 13:39:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][640/180715]	eta 10:56:55 lr 0.000000	time 0.1976 (0.2189)	total_loss 6.4562 (6.5126)	loss 2.8548 (2.9700)	multi_label_loss 3.6015 (3.5425)	grad_norm 83.0724 (inf)	mem 4960MB
+[2023-11-07 13:39:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][650/180715]	eta 10:57:03 lr 0.000000	time 0.2413 (0.2189)	total_loss 6.4467 (6.5124)	loss 2.9347 (2.9697)	multi_label_loss 3.5120 (3.5428)	grad_norm 89.3120 (inf)	mem 4960MB
+[2023-11-07 13:39:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][660/180715]	eta 10:56:23 lr 0.000000	time 0.2065 (0.2187)	total_loss 6.6294 (6.5131)	loss 3.0465 (2.9704)	multi_label_loss 3.5829 (3.5427)	grad_norm 80.7422 (inf)	mem 4960MB
+[2023-11-07 13:39:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][670/180715]	eta 10:56:30 lr 0.000000	time 0.2076 (0.2188)	total_loss 6.2700 (6.5126)	loss 2.8549 (2.9702)	multi_label_loss 3.4151 (3.5424)	grad_norm 89.9397 (inf)	mem 4960MB
+[2023-11-07 13:39:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][680/180715]	eta 10:56:13 lr 0.000000	time 0.2105 (0.2187)	total_loss 6.0987 (6.5120)	loss 2.7131 (2.9700)	multi_label_loss 3.3856 (3.5419)	grad_norm 86.9169 (inf)	mem 4960MB
+[2023-11-07 13:39:36 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][690/180715]	eta 10:55:51 lr 0.000000	time 0.2025 (0.2186)	total_loss 6.4413 (6.5110)	loss 3.0376 (2.9691)	multi_label_loss 3.4037 (3.5419)	grad_norm 83.5751 (inf)	mem 4960MB
+[2023-11-07 13:40:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 443): INFO Scale base_lr from 0.0016 to 6.25e-06
+[2023-11-07 13:40:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 444): INFO Scale warmup_lr from 4e-06 to 1.5625e-08
+[2023-11-07 13:40:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 445): INFO Scale min_lr from 4e-05 to 1.5625e-07
+[2023-11-07 13:40:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 453): INFO Full config saved to output/group_vit_gcc_yfcc_30e_bs16x1/config.json
+[2023-11-07 13:40:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 459): INFO Environment info:
+------------------------------------------------------------
+sys.platform: linux
+Python: 3.7.16 (default, Jan 17 2023, 22:20:44) [GCC 11.2.0]
+CUDA available: True
+GPU 0: NVIDIA GeForce RTX 3090
+CUDA_HOME: /usr/local/cuda
+NVCC: Build cuda_11.1.TC455_06.29190527_0
+GCC: gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+PyTorch: 1.8.0+cu111
+PyTorch compiling details: PyTorch built with:
+  - GCC 7.3
+  - C++ Version: 201402
+  - Intel(R) Math Kernel Library Version 2020.0.0 Product Build 20191122 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v1.7.0 (Git Hash 7aed236906b1f7a05c0917e5257a1af05e9ff683)
+  - OpenMP 201511 (a.k.a. OpenMP 4.5)
+  - NNPACK is enabled
+  - CPU capability usage: AVX2
+  - CUDA Runtime 11.1
+  - NVCC architecture flags: -gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_80,code=sm_80;-gencode;arch=compute_86,code=sm_86
+  - CuDNN 8.0.5
+  - Magma 2.5.2
+  - Build settings: BLAS_INFO=mkl, BUILD_TYPE=Release, CUDA_VERSION=11.1, CUDNN_VERSION=8.0.5, CXX_COMPILER=/opt/rh/devtoolset-7/root/usr/bin/c++, CXX_FLAGS= -Wno-deprecated -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -fopenmp -DNDEBUG -DUSE_KINETO -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -DUSE_XNNPACK -O2 -fPIC -Wno-narrowing -Wall -Wextra -Werror=return-type -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-unused-local-typedefs -Wno-strict-overflow -Wno-strict-aliasing -Wno-error=deprecated-declarations -Wno-stringop-overflow -Wno-psabi -Wno-error=pedantic -Wno-error=redundant-decls -Wno-error=old-style-cast -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Werror=format -Wno-stringop-overflow, LAPACK_INFO=mkl, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, TORCH_VERSION=1.8.0, USE_CUDA=ON, USE_CUDNN=ON, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=ON, USE_MPI=OFF, USE_NCCL=ON, USE_NNPACK=ON, USE_OPENMP=ON, 
+
+TorchVision: 0.9.0+cu111
+OpenCV: 4.4.0
+MMCV: 1.3.14
+MMCV Compiler: GCC 7.3
+MMCV CUDA Compiler: 11.1
+------------------------------------------------------------
+
+[2023-11-07 13:40:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 461): INFO Git hash: acd8aa3
+[2023-11-07 13:40:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 464): INFO data:
+  batch_size: 16
+  pin_memory: true
+  num_workers: 0
+  shuffle_buffer: 10000
+  seed: ${train.seed}
+  dataset:
+    meta:
+      gcc3m:
+        type: img_txt_pair
+        path: /workspace/Dataset/local_data/gcc3m_shards
+        prefix: gcc-train-{000000..000331}.tar
+        length: 2891445
+      gcc12m:
+        type: img_txt_pair
+        path: /workspace/Dataset/local_data/gcc12m_shards
+        prefix: gcc-conceptual-12m-{000000..001242}.tar
+        length: 11156203
+      imagenet:
+        type: img_cls_pair
+        path: /workspace/Dataset/local_data/imagenet_shards
+        prefix: imagenet-val-{000000..000009}.tar
+        length: 50000
+    train:
+    - gcc3m
+    val:
+    - imagenet
+  img_aug:
+    deit_aug: true
+    img_size: 224
+    img_scale:
+    - 0.08
+    - 1.0
+    interpolation: bilinear
+    color_jitter: 0.4
+    auto_augment: rand-m9-mstd0.5-inc1
+    re_prob: 0.25
+    re_mode: pixel
+    re_count: 1
+  text_aug:
+    max_seq_len: 77
+    multi_label: 3
+    word_type: noun
+train:
+  start_epoch: 0
+  epochs: 30
+  warmup_epochs: 2
+  base_lr: 6.25e-06
+  weight_decay: 0.05
+  warmup_lr: 1.5625e-08
+  min_lr: 1.5625e-07
+  clip_grad: 5.0
+  accumulation_steps: 0
+  amp_opt_level: O1
+  seed: 0
+  lr_scheduler:
+    name: cosine
+  optimizer:
+    name: adamw
+    eps: 1.0e-08
+    betas:
+    - 0.9
+    - 0.999
+evaluate:
+  eval_only: false
+  eval_freq: 1
+  task:
+  - cls
+  - seg
+  cls:
+    save_best: true
+    template: subset
+  seg:
+    save_best: true
+    cfg: segmentation/configs/_base_/datasets/pascal_voc12.py
+    template: simple
+    opts: []
+checkpoint:
+  auto_resume: true
+  resume: ''
+  freq: 1
+  max_kept: -1
+  save_freq: 1
+model_name: group_vit_gcc_yfcc_30e_bs16x1
+output: output/group_vit_gcc_yfcc_30e_bs16x1
+tag: default
+print_freq: 10
+seed: 0
+wandb: true
+local_rank: 0
+vis: []
+_base_: default.yml
+model:
+  type: MultiLabelContrastive
+  img_encoder:
+    type: GroupViT
+    embed_dim: 384
+    num_heads:
+    - 6
+    - 6
+    - 6
+    depths:
+    - 6
+    - 3
+    - 3
+    num_group_tokens:
+    - 64
+    - 8
+    - 0
+    num_output_groups:
+    - 64
+    - 8
+    drop_rate: 0.0
+    drop_path_rate: 0.1
+  text_encoder:
+    type: TextTransformer
+    context_length: 77
+    width: 256
+    layers: 12
+    vocab_size: 49408
+  contrast_temperature: 0.07
+  proj_num_layers: 2
+  output_dim: 256
+  multi_label: ${data.text_aug.multi_label}
+
+[2023-11-07 13:40:13 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 112): INFO Creating model:MultiLabelContrastive/group_vit_gcc_yfcc_30e_bs16x1
+[2023-11-07 13:40:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 117): INFO MultiLabelContrastive(
+  (img_encoder): GroupViT(
+    (patch_embed): PatchEmbed(
+      (proj): Conv2d(3, 384, kernel_size=(16, 16), stride=(16, 16))
+      (norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+    )
+    (avgpool): AdaptiveAvgPool1d(output_size=1)
+    (pos_drop): Dropout(p=0.0, inplace=False)
+    (layers): ModuleList(
+      (0): GroupingLayer(
+        dim=384, 
+        input_resolution=196, 
+        depth=6, 
+        num_group_token=64, 
+        
+        (blocks): ModuleList(
+          (0): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): Identity()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (1): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (2): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (3): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (4): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (5): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+        )
+        (downsample): GroupingBlock(
+          hard=True, 
+          gumbel=True, 
+          sum_assign=False, 
+          num_output_group=64, 
+           
+          (norm_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_inter): Mlp(
+            (fc1): Linear(in_features=64, out_features=192, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=192, out_features=64, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_post_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (norm_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (pre_assign_attn): CrossAttnBlock(
+            (norm_post): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (norm_q): Identity()
+            (norm_k): Identity()
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=False
+              (q_proj): Linear(in_features=384, out_features=384, bias=True)
+              (k_proj): Linear(in_features=384, out_features=384, bias=True)
+              (v_proj): Linear(in_features=384, out_features=384, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): Identity()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (assign): AssignAttention(
+            num_heads: 1, 
+            hard: True, 
+            gumbel: True, 
+            sum_assign=False, 
+            gumbel_tau: 1.0, 
+            assign_eps: 1.0
+            (q_proj): Linear(in_features=384, out_features=384, bias=True)
+            (k_proj): Linear(in_features=384, out_features=384, bias=True)
+            (v_proj): Linear(in_features=384, out_features=384, bias=True)
+            (attn_drop): Dropout(p=0.0, inplace=False)
+            (proj): Linear(in_features=384, out_features=384, bias=True)
+            (proj_drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_new_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_channels): Mlp(
+            (fc1): Linear(in_features=384, out_features=1536, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=1536, out_features=384, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (reduction): Identity()
+        )
+      )
+      (1): GroupingLayer(
+        dim=384, 
+        input_resolution=64, 
+        depth=3, 
+        num_group_token=8, 
+        
+        (blocks): ModuleList(
+          (0): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (1): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (2): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+        )
+        (downsample): GroupingBlock(
+          hard=True, 
+          gumbel=True, 
+          sum_assign=False, 
+          num_output_group=8, 
+           
+          (norm_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_inter): Mlp(
+            (fc1): Linear(in_features=8, out_features=192, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=192, out_features=8, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_post_tokens): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (norm_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (pre_assign_attn): CrossAttnBlock(
+            (norm_post): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (norm_q): Identity()
+            (norm_k): Identity()
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=False
+              (q_proj): Linear(in_features=384, out_features=384, bias=True)
+              (k_proj): Linear(in_features=384, out_features=384, bias=True)
+              (v_proj): Linear(in_features=384, out_features=384, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): Identity()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (assign): AssignAttention(
+            num_heads: 1, 
+            hard: True, 
+            gumbel: True, 
+            sum_assign=False, 
+            gumbel_tau: 1.0, 
+            assign_eps: 1.0
+            (q_proj): Linear(in_features=384, out_features=384, bias=True)
+            (k_proj): Linear(in_features=384, out_features=384, bias=True)
+            (v_proj): Linear(in_features=384, out_features=384, bias=True)
+            (attn_drop): Dropout(p=0.0, inplace=False)
+            (proj): Linear(in_features=384, out_features=384, bias=True)
+            (proj_drop): Dropout(p=0.0, inplace=False)
+          )
+          (norm_new_x): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (mlp_channels): Mlp(
+            (fc1): Linear(in_features=384, out_features=1536, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=1536, out_features=384, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+          (reduction): Identity()
+        )
+        (group_projector): Sequential(
+          (0): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+          (1): MixerMlp(
+            (fc1): Linear(in_features=64, out_features=192, bias=True)
+            (act): GELU()
+            (fc2): Linear(in_features=192, out_features=8, bias=True)
+            (drop): Dropout(p=0.0, inplace=False)
+          )
+        )
+      )
+      (2): GroupingLayer(
+        dim=384, 
+        input_resolution=8, 
+        depth=3, 
+        num_group_token=0, 
+        
+        (blocks): ModuleList(
+          (0): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (1): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+          (2): AttnBlock(
+            (norm1): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (attn): Attention(
+              num_heads=6, 
+              qkv_bias=0.125, 
+              qkv_fuse=True
+              (qkv): Linear(in_features=384, out_features=1152, bias=True)
+              (attn_drop): Dropout(p=0.0, inplace=False)
+              (proj): Linear(in_features=384, out_features=384, bias=True)
+              (proj_drop): Dropout(p=0.0, inplace=False)
+            )
+            (drop_path): DropPath()
+            (norm2): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+            (mlp): Mlp(
+              (fc1): Linear(in_features=384, out_features=1536, bias=True)
+              (act): GELU()
+              (fc2): Linear(in_features=1536, out_features=384, bias=True)
+              (drop): Dropout(p=0.0, inplace=False)
+            )
+          )
+        )
+      )
+    )
+    (norm): LayerNorm((384,), eps=1e-05, elementwise_affine=True)
+    (head): Identity()
+  )
+  (text_encoder): TextTransformer(
+    (transformer): Transformer(
+      (resblocks): Sequential(
+        (0): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (1): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (2): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (3): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (4): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (5): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (6): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (7): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (8): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (9): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (10): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+        (11): ResidualAttentionBlock(
+          (attn): MultiheadAttention(
+            (out_proj): _LinearWithBias(in_features=256, out_features=256, bias=True)
+          )
+          (ln_1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+          (mlp): Sequential(
+            (c_fc): Linear(in_features=256, out_features=1024, bias=True)
+            (gelu): QuickGELU()
+            (c_proj): Linear(in_features=1024, out_features=256, bias=True)
+          )
+          (ln_2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        )
+      )
+    )
+    (ln_final): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+    (token_embedding): Embedding(49408, 256)
+  )
+  (cross_entropy): CrossEntropyLoss()
+  (soft_cross_entropy): SoftTargetCrossEntropy()
+  (img_projector): ProjectMLP(
+    (linear_hidden): Sequential(
+      (0): Conv1d(384, 4096, kernel_size=(1,), stride=(1,))
+      (1): SyncBatchNorm(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+    )
+    (linear_out): Conv1d(4096, 256, kernel_size=(1,), stride=(1,))
+  )
+  (text_projector): ProjectMLP(
+    (linear_hidden): Sequential(
+      (0): Conv1d(256, 4096, kernel_size=(1,), stride=(1,))
+      (1): SyncBatchNorm(4096, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+    )
+    (linear_out): Conv1d(4096, 256, kernel_size=(1,), stride=(1,))
+  )
+)
+[2023-11-07 13:40:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 126): INFO number of params: 55726610
+[2023-11-07 13:40:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 138): INFO no checkpoint found in output/group_vit_gcc_yfcc_30e_bs16x1, ignoring auto resume
+[2023-11-07 13:40:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 155): INFO Start training
+[2023-11-07 13:40:15 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][0/180715]	eta 1 day, 12:51:08 lr 0.000000	time 0.7341 (0.7341)	total_loss 6.9103 (6.9103)	loss 3.1129 (3.1129)	multi_label_loss 3.7974 (3.7974)	grad_norm inf (inf)	mem 4960MB
+[2023-11-07 13:40:17 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][10/180715]	eta 12:40:30 lr 0.000000	time 0.2000 (0.2525)	total_loss 6.3131 (6.5510)	loss 2.8545 (3.0045)	multi_label_loss 3.4586 (3.5465)	grad_norm 80.4761 (inf)	mem 4960MB
+[2023-11-07 13:40:19 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][20/180715]	eta 11:25:11 lr 0.000000	time 0.1980 (0.2275)	total_loss 6.4397 (6.5471)	loss 2.9878 (2.9857)	multi_label_loss 3.4519 (3.5614)	grad_norm 83.9530 (inf)	mem 4960MB
+[2023-11-07 13:40:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][30/180715]	eta 10:59:42 lr 0.000000	time 0.1987 (0.2191)	total_loss 6.6410 (6.5602)	loss 2.9047 (3.0060)	multi_label_loss 3.7362 (3.5542)	grad_norm 87.7920 (inf)	mem 4960MB
+[2023-11-07 13:40:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][40/180715]	eta 10:46:43 lr 0.000000	time 0.1976 (0.2148)	total_loss 6.4645 (6.5676)	loss 2.9392 (3.0097)	multi_label_loss 3.5253 (3.5580)	grad_norm 86.2535 (inf)	mem 4960MB
+[2023-11-07 13:40:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][50/180715]	eta 10:41:38 lr 0.000000	time 0.2377 (0.2131)	total_loss 6.6517 (6.5861)	loss 2.9690 (3.0183)	multi_label_loss 3.6827 (3.5679)	grad_norm 91.1275 (inf)	mem 4960MB
+[2023-11-07 13:40:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][60/180715]	eta 10:35:05 lr 0.000000	time 0.1983 (0.2109)	total_loss 6.2771 (6.5602)	loss 2.6879 (2.9973)	multi_label_loss 3.5892 (3.5629)	grad_norm 87.4329 (inf)	mem 4960MB
+[2023-11-07 13:40:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][70/180715]	eta 10:35:00 lr 0.000000	time 0.2069 (0.2109)	total_loss 6.5385 (6.5542)	loss 2.9538 (2.9908)	multi_label_loss 3.5846 (3.5633)	grad_norm 80.6388 (inf)	mem 4960MB
+[2023-11-07 13:40:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][80/180715]	eta 10:34:41 lr 0.000000	time 0.2154 (0.2108)	total_loss 6.6629 (6.5445)	loss 2.9142 (2.9799)	multi_label_loss 3.7487 (3.5646)	grad_norm 82.6600 (inf)	mem 4960MB
+[2023-11-07 13:40:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][90/180715]	eta 10:31:57 lr 0.000000	time 0.1988 (0.2099)	total_loss 6.6002 (6.5359)	loss 3.1571 (2.9802)	multi_label_loss 3.4430 (3.5557)	grad_norm 91.0825 (inf)	mem 4960MB
+[2023-11-07 13:40:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][100/180715]	eta 10:29:25 lr 0.000000	time 0.2077 (0.2091)	total_loss 6.6559 (6.5316)	loss 3.0100 (2.9763)	multi_label_loss 3.6459 (3.5553)	grad_norm 86.6459 (inf)	mem 4960MB
+[2023-11-07 13:40:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][110/180715]	eta 10:29:22 lr 0.000000	time 0.1961 (0.2091)	total_loss 6.6711 (6.5326)	loss 2.9669 (2.9767)	multi_label_loss 3.7043 (3.5559)	grad_norm 87.9472 (inf)	mem 4960MB
+[2023-11-07 13:40:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][120/180715]	eta 10:26:52 lr 0.000000	time 0.1964 (0.2083)	total_loss 6.4130 (6.5286)	loss 2.9712 (2.9753)	multi_label_loss 3.4418 (3.5533)	grad_norm 86.8822 (inf)	mem 4960MB
+[2023-11-07 13:40:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][130/180715]	eta 10:28:22 lr 0.000000	time 0.2114 (0.2088)	total_loss 6.4148 (6.5270)	loss 2.8911 (2.9752)	multi_label_loss 3.5237 (3.5518)	grad_norm 85.0652 (inf)	mem 4960MB
+[2023-11-07 13:40:43 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][140/180715]	eta 10:27:21 lr 0.000000	time 0.1977 (0.2085)	total_loss 7.0856 (6.5323)	loss 3.2536 (2.9771)	multi_label_loss 3.8320 (3.5552)	grad_norm 88.0892 (inf)	mem 4960MB
+[2023-11-07 13:40:45 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][150/180715]	eta 10:25:52 lr 0.000000	time 0.2052 (0.2080)	total_loss 6.5941 (6.5295)	loss 3.0350 (2.9765)	multi_label_loss 3.5590 (3.5530)	grad_norm 81.0266 (inf)	mem 4960MB
+[2023-11-07 13:40:47 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][160/180715]	eta 10:24:21 lr 0.000000	time 0.2015 (0.2075)	total_loss 6.6823 (6.5350)	loss 3.1162 (2.9820)	multi_label_loss 3.5662 (3.5530)	grad_norm 86.4366 (inf)	mem 4960MB
+[2023-11-07 13:40:49 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][170/180715]	eta 10:25:29 lr 0.000000	time 0.2156 (0.2079)	total_loss 6.3235 (6.5367)	loss 2.7860 (2.9820)	multi_label_loss 3.5375 (3.5547)	grad_norm 84.5214 (inf)	mem 4960MB
+[2023-11-07 13:40:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][180/180715]	eta 10:26:58 lr 0.000000	time 0.2183 (0.2084)	total_loss 6.4866 (6.5283)	loss 2.9744 (2.9787)	multi_label_loss 3.5122 (3.5497)	grad_norm 83.5705 (inf)	mem 4960MB
+[2023-11-07 13:40:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][190/180715]	eta 10:26:59 lr 0.000000	time 0.2007 (0.2084)	total_loss 6.3708 (6.5267)	loss 2.7909 (2.9769)	multi_label_loss 3.5799 (3.5498)	grad_norm 89.1399 (inf)	mem 4960MB
+[2023-11-07 13:40:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][200/180715]	eta 10:26:14 lr 0.000000	time 0.2023 (0.2082)	total_loss 6.6524 (6.5266)	loss 3.0849 (2.9758)	multi_label_loss 3.5675 (3.5508)	grad_norm 88.3554 (inf)	mem 4960MB
+[2023-11-07 13:40:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][210/180715]	eta 10:24:55 lr 0.000000	time 0.2015 (0.2077)	total_loss 6.4121 (6.5302)	loss 2.9137 (2.9790)	multi_label_loss 3.4984 (3.5512)	grad_norm 84.7322 (inf)	mem 4960MB
+[2023-11-07 13:41:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][220/180715]	eta 10:23:55 lr 0.000000	time 0.2039 (0.2074)	total_loss 6.6733 (6.5361)	loss 3.0722 (2.9829)	multi_label_loss 3.6011 (3.5532)	grad_norm 88.2165 (inf)	mem 4960MB
+[2023-11-07 13:41:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][230/180715]	eta 10:23:00 lr 0.000000	time 0.1982 (0.2071)	total_loss 6.6161 (6.5336)	loss 3.0972 (2.9827)	multi_label_loss 3.5188 (3.5509)	grad_norm 89.9252 (inf)	mem 4960MB
+[2023-11-07 13:41:04 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][240/180715]	eta 10:22:32 lr 0.000000	time 0.2109 (0.2070)	total_loss 6.3685 (6.5297)	loss 2.7801 (2.9779)	multi_label_loss 3.5884 (3.5518)	grad_norm 81.6572 (inf)	mem 4960MB
+[2023-11-07 13:41:06 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][250/180715]	eta 10:21:49 lr 0.000000	time 0.1973 (0.2067)	total_loss 6.7681 (6.5323)	loss 3.1369 (2.9799)	multi_label_loss 3.6313 (3.5524)	grad_norm 91.2514 (inf)	mem 4960MB
+[2023-11-07 13:41:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][260/180715]	eta 10:21:14 lr 0.000000	time 0.1996 (0.2066)	total_loss 6.5118 (6.5317)	loss 2.9271 (2.9788)	multi_label_loss 3.5848 (3.5529)	grad_norm 88.7929 (inf)	mem 4960MB
+[2023-11-07 13:41:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][270/180715]	eta 10:20:33 lr 0.000000	time 0.1984 (0.2063)	total_loss 6.5964 (6.5299)	loss 2.9056 (2.9774)	multi_label_loss 3.6908 (3.5525)	grad_norm 83.9769 (inf)	mem 4960MB
+[2023-11-07 13:41:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][280/180715]	eta 10:19:52 lr 0.000000	time 0.1981 (0.2061)	total_loss 6.5785 (6.5261)	loss 3.0016 (2.9743)	multi_label_loss 3.5769 (3.5518)	grad_norm 90.5738 (inf)	mem 4960MB
+[2023-11-07 13:41:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][290/180715]	eta 10:19:13 lr 0.000000	time 0.1976 (0.2059)	total_loss 6.5061 (6.5269)	loss 2.9285 (2.9755)	multi_label_loss 3.5776 (3.5514)	grad_norm 80.5020 (inf)	mem 4960MB
+[2023-11-07 13:41:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][300/180715]	eta 10:18:16 lr 0.000000	time 0.2031 (0.2056)	total_loss 6.6259 (6.5288)	loss 3.1050 (2.9773)	multi_label_loss 3.5209 (3.5515)	grad_norm 88.4157 (inf)	mem 4960MB
+[2023-11-07 13:41:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][310/180715]	eta 10:18:12 lr 0.000000	time 0.2002 (0.2056)	total_loss 6.6919 (6.5306)	loss 3.1512 (2.9793)	multi_label_loss 3.5407 (3.5513)	grad_norm 89.8492 (inf)	mem 4960MB
+[2023-11-07 13:41:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][320/180715]	eta 10:17:43 lr 0.000000	time 0.2041 (0.2055)	total_loss 6.5929 (6.5287)	loss 3.0660 (2.9771)	multi_label_loss 3.5270 (3.5516)	grad_norm 82.3546 (inf)	mem 4960MB
+[2023-11-07 13:41:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][330/180715]	eta 10:17:20 lr 0.000000	time 0.2005 (0.2053)	total_loss 6.6514 (6.5275)	loss 3.0391 (2.9766)	multi_label_loss 3.6123 (3.5509)	grad_norm 85.4123 (inf)	mem 4960MB
+[2023-11-07 13:41:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][340/180715]	eta 10:16:51 lr 0.000000	time 0.2004 (0.2052)	total_loss 6.6673 (6.5281)	loss 3.1446 (2.9766)	multi_label_loss 3.5226 (3.5515)	grad_norm 79.2359 (inf)	mem 4960MB
+[2023-11-07 13:41:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][350/180715]	eta 10:16:32 lr 0.000000	time 0.2028 (0.2051)	total_loss 6.6315 (6.5296)	loss 3.0259 (2.9778)	multi_label_loss 3.6056 (3.5519)	grad_norm 83.2256 (inf)	mem 4960MB
+[2023-11-07 13:41:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][360/180715]	eta 10:16:13 lr 0.000000	time 0.2063 (0.2050)	total_loss 6.4614 (6.5293)	loss 2.9647 (2.9775)	multi_label_loss 3.4967 (3.5518)	grad_norm 82.8760 (inf)	mem 4960MB
+[2023-11-07 13:41:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][370/180715]	eta 10:16:06 lr 0.000000	time 0.2017 (0.2050)	total_loss 6.5261 (6.5282)	loss 2.9140 (2.9774)	multi_label_loss 3.6120 (3.5508)	grad_norm 83.8753 (inf)	mem 4960MB
+[2023-11-07 13:41:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][380/180715]	eta 10:15:49 lr 0.000000	time 0.1920 (0.2049)	total_loss 6.5217 (6.5259)	loss 3.0588 (2.9769)	multi_label_loss 3.4629 (3.5489)	grad_norm 83.0195 (inf)	mem 4960MB
+[2023-11-07 13:41:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][390/180715]	eta 10:15:26 lr 0.000000	time 0.2023 (0.2048)	total_loss 6.3392 (6.5217)	loss 2.8098 (2.9737)	multi_label_loss 3.5294 (3.5480)	grad_norm 84.1396 (inf)	mem 4960MB
+[2023-11-07 13:41:36 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][400/180715]	eta 10:14:59 lr 0.000000	time 0.2047 (0.2046)	total_loss 6.2542 (6.5206)	loss 2.8199 (2.9736)	multi_label_loss 3.4342 (3.5469)	grad_norm 87.9219 (inf)	mem 4960MB
+[2023-11-07 13:41:38 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][410/180715]	eta 10:14:26 lr 0.000000	time 0.2025 (0.2045)	total_loss 6.5243 (6.5215)	loss 3.1231 (2.9742)	multi_label_loss 3.4012 (3.5474)	grad_norm 86.1162 (inf)	mem 4960MB
+[2023-11-07 13:41:40 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][420/180715]	eta 10:14:14 lr 0.000000	time 0.2016 (0.2044)	total_loss 6.2432 (6.5204)	loss 2.7248 (2.9728)	multi_label_loss 3.5184 (3.5475)	grad_norm 80.1275 (inf)	mem 4960MB
+[2023-11-07 13:41:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][430/180715]	eta 10:13:49 lr 0.000000	time 0.1986 (0.2043)	total_loss 6.3581 (6.5206)	loss 2.8731 (2.9733)	multi_label_loss 3.4850 (3.5473)	grad_norm 80.7616 (inf)	mem 4960MB
+[2023-11-07 13:41:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][440/180715]	eta 10:13:29 lr 0.000000	time 0.1995 (0.2042)	total_loss 6.4091 (6.5201)	loss 2.9003 (2.9727)	multi_label_loss 3.5088 (3.5474)	grad_norm 85.7033 (inf)	mem 4960MB
+[2023-11-07 13:41:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][450/180715]	eta 10:13:11 lr 0.000000	time 0.1995 (0.2041)	total_loss 6.6296 (6.5208)	loss 3.0867 (2.9734)	multi_label_loss 3.5429 (3.5474)	grad_norm 83.3285 (inf)	mem 4960MB
+[2023-11-07 13:41:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][460/180715]	eta 10:12:53 lr 0.000000	time 0.1999 (0.2040)	total_loss 6.4754 (6.5181)	loss 2.9879 (2.9716)	multi_label_loss 3.4875 (3.5464)	grad_norm 89.8293 (inf)	mem 4960MB
+[2023-11-07 13:41:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][470/180715]	eta 10:12:34 lr 0.000000	time 0.1983 (0.2039)	total_loss 6.1849 (6.5168)	loss 2.7390 (2.9712)	multi_label_loss 3.4459 (3.5456)	grad_norm 86.4533 (inf)	mem 4960MB
+[2023-11-07 13:41:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][480/180715]	eta 10:12:32 lr 0.000000	time 0.2016 (0.2039)	total_loss 6.3845 (6.5167)	loss 3.0136 (2.9713)	multi_label_loss 3.3709 (3.5454)	grad_norm 90.3776 (inf)	mem 4960MB
+[2023-11-07 13:41:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][490/180715]	eta 10:12:12 lr 0.000000	time 0.2023 (0.2038)	total_loss 6.7634 (6.5179)	loss 3.2205 (2.9730)	multi_label_loss 3.5428 (3.5449)	grad_norm 93.5307 (inf)	mem 4960MB
+[2023-11-07 13:41:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][500/180715]	eta 10:11:54 lr 0.000000	time 0.1990 (0.2037)	total_loss 6.5112 (6.5168)	loss 2.9630 (2.9719)	multi_label_loss 3.5483 (3.5449)	grad_norm 78.8166 (inf)	mem 4960MB
+[2023-11-07 13:41:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][510/180715]	eta 10:11:44 lr 0.000000	time 0.2032 (0.2037)	total_loss 6.7675 (6.5175)	loss 3.2085 (2.9727)	multi_label_loss 3.5589 (3.5448)	grad_norm 87.9802 (inf)	mem 4960MB
+[2023-11-07 13:42:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][520/180715]	eta 10:11:40 lr 0.000000	time 0.2016 (0.2037)	total_loss 6.9567 (6.5189)	loss 3.3296 (2.9744)	multi_label_loss 3.6272 (3.5446)	grad_norm 81.9324 (inf)	mem 4960MB
+[2023-11-07 13:42:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][530/180715]	eta 10:11:46 lr 0.000000	time 0.2034 (0.2037)	total_loss 6.8533 (6.5191)	loss 3.1180 (2.9741)	multi_label_loss 3.7352 (3.5449)	grad_norm 88.7379 (inf)	mem 4960MB
+[2023-11-07 13:42:04 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][540/180715]	eta 10:11:40 lr 0.000000	time 0.2065 (0.2037)	total_loss 6.3609 (6.5175)	loss 2.9066 (2.9727)	multi_label_loss 3.4543 (3.5448)	grad_norm 88.0322 (inf)	mem 4960MB
+[2023-11-07 13:42:06 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][550/180715]	eta 10:11:27 lr 0.000000	time 0.2011 (0.2036)	total_loss 6.3390 (6.5171)	loss 2.9395 (2.9727)	multi_label_loss 3.3996 (3.5444)	grad_norm 82.7321 (inf)	mem 4960MB
+[2023-11-07 13:42:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][560/180715]	eta 10:11:14 lr 0.000000	time 0.1990 (0.2036)	total_loss 6.2340 (6.5170)	loss 2.7346 (2.9725)	multi_label_loss 3.4994 (3.5445)	grad_norm 85.4191 (inf)	mem 4960MB
+[2023-11-07 13:42:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][570/180715]	eta 10:10:52 lr 0.000000	time 0.2008 (0.2035)	total_loss 6.8281 (6.5160)	loss 3.1554 (2.9715)	multi_label_loss 3.6727 (3.5445)	grad_norm 89.1853 (inf)	mem 4960MB
+[2023-11-07 13:42:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][580/180715]	eta 10:10:42 lr 0.000000	time 0.2027 (0.2034)	total_loss 6.6368 (6.5174)	loss 3.0114 (2.9724)	multi_label_loss 3.6254 (3.5450)	grad_norm 86.6352 (inf)	mem 4960MB
+[2023-11-07 13:42:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][590/180715]	eta 10:10:30 lr 0.000000	time 0.2012 (0.2034)	total_loss 6.4195 (6.5175)	loss 2.8997 (2.9724)	multi_label_loss 3.5198 (3.5451)	grad_norm 81.8728 (inf)	mem 4960MB
+[2023-11-07 13:42:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][600/180715]	eta 10:10:24 lr 0.000000	time 0.1987 (0.2033)	total_loss 6.2104 (6.5155)	loss 2.6609 (2.9707)	multi_label_loss 3.5495 (3.5448)	grad_norm 82.9780 (inf)	mem 4960MB
+[2023-11-07 13:42:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][610/180715]	eta 10:10:15 lr 0.000000	time 0.2061 (0.2033)	total_loss 6.6019 (6.5139)	loss 2.9949 (2.9697)	multi_label_loss 3.6070 (3.5441)	grad_norm 91.7386 (inf)	mem 4960MB
+[2023-11-07 13:42:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][620/180715]	eta 10:10:05 lr 0.000000	time 0.2000 (0.2033)	total_loss 6.4041 (6.5129)	loss 2.8839 (2.9689)	multi_label_loss 3.5202 (3.5440)	grad_norm 85.4750 (inf)	mem 4960MB
+[2023-11-07 13:42:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][630/180715]	eta 10:09:56 lr 0.000000	time 0.1983 (0.2032)	total_loss 6.4762 (6.5132)	loss 2.9277 (2.9693)	multi_label_loss 3.5486 (3.5438)	grad_norm 81.0412 (inf)	mem 4960MB
+[2023-11-07 13:42:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][640/180715]	eta 10:09:34 lr 0.000000	time 0.1920 (0.2031)	total_loss 6.5864 (6.5142)	loss 2.9324 (2.9699)	multi_label_loss 3.6540 (3.5443)	grad_norm 79.5276 (inf)	mem 4960MB
+[2023-11-07 13:42:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][650/180715]	eta 10:09:30 lr 0.000000	time 0.1986 (0.2031)	total_loss 6.4709 (6.5151)	loss 2.9228 (2.9710)	multi_label_loss 3.5481 (3.5441)	grad_norm 81.6814 (inf)	mem 4960MB
+[2023-11-07 13:42:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][660/180715]	eta 10:09:28 lr 0.000000	time 0.1981 (0.2031)	total_loss 6.3012 (6.5143)	loss 2.8714 (2.9714)	multi_label_loss 3.4298 (3.5429)	grad_norm 83.3628 (inf)	mem 4960MB
+[2023-11-07 13:42:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][670/180715]	eta 10:09:11 lr 0.000000	time 0.2001 (0.2030)	total_loss 6.1458 (6.5133)	loss 2.7259 (2.9708)	multi_label_loss 3.4199 (3.5426)	grad_norm 87.2136 (inf)	mem 4960MB
+[2023-11-07 13:42:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][680/180715]	eta 10:08:59 lr 0.000000	time 0.2035 (0.2030)	total_loss 6.4557 (6.5126)	loss 2.7782 (2.9709)	multi_label_loss 3.6775 (3.5417)	grad_norm 84.5388 (inf)	mem 4960MB
+[2023-11-07 13:42:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][690/180715]	eta 10:08:40 lr 0.000000	time 0.1983 (0.2029)	total_loss 6.4466 (6.5121)	loss 2.8841 (2.9702)	multi_label_loss 3.5625 (3.5420)	grad_norm 86.8174 (inf)	mem 4960MB
+[2023-11-07 13:42:36 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][700/180715]	eta 10:08:38 lr 0.000000	time 0.2051 (0.2029)	total_loss 6.9404 (6.5128)	loss 3.4541 (2.9705)	multi_label_loss 3.4863 (3.5423)	grad_norm 85.9331 (inf)	mem 4960MB
+[2023-11-07 13:42:38 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][710/180715]	eta 10:08:38 lr 0.000000	time 0.1997 (0.2029)	total_loss 6.3930 (6.5129)	loss 2.9228 (2.9715)	multi_label_loss 3.4703 (3.5415)	grad_norm 85.5899 (inf)	mem 4960MB
+[2023-11-07 13:42:40 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][720/180715]	eta 10:09:05 lr 0.000000	time 0.2479 (0.2030)	total_loss 6.6902 (6.5122)	loss 3.1952 (2.9711)	multi_label_loss 3.4950 (3.5412)	grad_norm 90.7687 (inf)	mem 4960MB
+[2023-11-07 13:42:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][730/180715]	eta 10:09:05 lr 0.000000	time 0.2017 (0.2030)	total_loss 6.3859 (6.5121)	loss 2.8732 (2.9709)	multi_label_loss 3.5127 (3.5412)	grad_norm 89.4218 (inf)	mem 4960MB
+[2023-11-07 13:42:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][740/180715]	eta 10:09:15 lr 0.000000	time 0.2045 (0.2031)	total_loss 6.3703 (6.5117)	loss 2.8230 (2.9709)	multi_label_loss 3.5473 (3.5407)	grad_norm 82.2889 (inf)	mem 4960MB
+[2023-11-07 13:42:47 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][750/180715]	eta 10:09:37 lr 0.000000	time 0.2068 (0.2032)	total_loss 6.5915 (6.5101)	loss 3.1189 (2.9704)	multi_label_loss 3.4727 (3.5398)	grad_norm 90.1809 (inf)	mem 4960MB
+[2023-11-07 13:42:49 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][760/180715]	eta 10:10:22 lr 0.000000	time 0.2473 (0.2035)	total_loss 6.6980 (6.5102)	loss 3.0255 (2.9703)	multi_label_loss 3.6726 (3.5399)	grad_norm 80.8515 (inf)	mem 4960MB
+[2023-11-07 13:42:51 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][770/180715]	eta 10:11:05 lr 0.000000	time 0.2501 (0.2038)	total_loss 6.4231 (6.5095)	loss 2.8323 (2.9700)	multi_label_loss 3.5908 (3.5395)	grad_norm 85.7397 (inf)	mem 4960MB
+[2023-11-07 13:42:53 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][780/180715]	eta 10:10:56 lr 0.000000	time 0.2019 (0.2037)	total_loss 6.4256 (6.5083)	loss 2.8954 (2.9695)	multi_label_loss 3.5302 (3.5388)	grad_norm 88.4012 (inf)	mem 4960MB
+[2023-11-07 13:42:55 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][790/180715]	eta 10:11:21 lr 0.000000	time 0.2680 (0.2039)	total_loss 6.3856 (6.5083)	loss 2.8951 (2.9693)	multi_label_loss 3.4905 (3.5390)	grad_norm 84.9624 (inf)	mem 4960MB
+[2023-11-07 13:42:57 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][800/180715]	eta 10:12:12 lr 0.000000	time 0.2073 (0.2042)	total_loss 7.0610 (6.5077)	loss 3.3843 (2.9690)	multi_label_loss 3.6767 (3.5387)	grad_norm 93.2093 (inf)	mem 4960MB
+[2023-11-07 13:43:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][810/180715]	eta 10:12:34 lr 0.000000	time 0.2010 (0.2043)	total_loss 6.4056 (6.5064)	loss 2.8870 (2.9684)	multi_label_loss 3.5185 (3.5380)	grad_norm 81.6295 (inf)	mem 4960MB
+[2023-11-07 13:43:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][820/180715]	eta 10:13:09 lr 0.000000	time 0.2183 (0.2045)	total_loss 6.1956 (6.5071)	loss 2.7347 (2.9690)	multi_label_loss 3.4609 (3.5381)	grad_norm 83.5033 (inf)	mem 4960MB
+[2023-11-07 13:43:04 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][830/180715]	eta 10:13:10 lr 0.000000	time 0.2036 (0.2045)	total_loss 6.4381 (6.5059)	loss 2.8819 (2.9680)	multi_label_loss 3.5562 (3.5379)	grad_norm 78.9232 (inf)	mem 4960MB
+[2023-11-07 13:43:06 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][840/180715]	eta 10:13:20 lr 0.000000	time 0.2024 (0.2046)	total_loss 6.6679 (6.5056)	loss 3.0930 (2.9681)	multi_label_loss 3.5749 (3.5375)	grad_norm 87.8793 (inf)	mem 4960MB
+[2023-11-07 13:43:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][850/180715]	eta 10:13:18 lr 0.000000	time 0.1973 (0.2046)	total_loss 6.3953 (6.5054)	loss 2.7491 (2.9680)	multi_label_loss 3.6462 (3.5374)	grad_norm 88.3414 (inf)	mem 4960MB
+[2023-11-07 13:43:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][860/180715]	eta 10:13:28 lr 0.000000	time 0.2050 (0.2047)	total_loss 6.4499 (6.5057)	loss 2.8993 (2.9684)	multi_label_loss 3.5505 (3.5373)	grad_norm 81.1738 (inf)	mem 4960MB
+[2023-11-07 13:43:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][870/180715]	eta 10:13:41 lr 0.000000	time 0.2003 (0.2047)	total_loss 6.2188 (6.5050)	loss 2.7873 (2.9681)	multi_label_loss 3.4315 (3.5369)	grad_norm 82.5344 (inf)	mem 4960MB
+[2023-11-07 13:43:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][880/180715]	eta 10:13:36 lr 0.000000	time 0.1977 (0.2047)	total_loss 6.4532 (6.5038)	loss 2.9766 (2.9672)	multi_label_loss 3.4765 (3.5367)	grad_norm 79.9971 (inf)	mem 4960MB
+[2023-11-07 13:43:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][890/180715]	eta 10:13:37 lr 0.000000	time 0.2485 (0.2047)	total_loss 6.2303 (6.5040)	loss 2.7928 (2.9672)	multi_label_loss 3.4375 (3.5367)	grad_norm 83.7888 (inf)	mem 4960MB
+[2023-11-07 13:43:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][900/180715]	eta 10:13:44 lr 0.000000	time 0.2069 (0.2048)	total_loss 6.6812 (6.5035)	loss 3.1708 (2.9671)	multi_label_loss 3.5104 (3.5365)	grad_norm 83.3995 (inf)	mem 4960MB
+[2023-11-07 13:43:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][910/180715]	eta 10:13:58 lr 0.000000	time 0.2145 (0.2049)	total_loss 6.5319 (6.5034)	loss 3.1148 (2.9670)	multi_label_loss 3.4171 (3.5363)	grad_norm 83.6859 (inf)	mem 4960MB
+[2023-11-07 13:43:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][920/180715]	eta 10:13:58 lr 0.000000	time 0.2100 (0.2049)	total_loss 6.5906 (6.5026)	loss 3.0864 (2.9662)	multi_label_loss 3.5042 (3.5364)	grad_norm 85.2887 (inf)	mem 4960MB
+[2023-11-07 13:43:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][930/180715]	eta 10:14:06 lr 0.000000	time 0.2014 (0.2049)	total_loss 6.5433 (6.5032)	loss 3.0011 (2.9666)	multi_label_loss 3.5422 (3.5366)	grad_norm 80.9417 (inf)	mem 4960MB
+[2023-11-07 13:43:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][940/180715]	eta 10:14:14 lr 0.000000	time 0.2039 (0.2050)	total_loss 6.5081 (6.5044)	loss 2.9277 (2.9679)	multi_label_loss 3.5804 (3.5365)	grad_norm 83.0455 (inf)	mem 4960MB
+[2023-11-07 13:43:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][950/180715]	eta 10:14:16 lr 0.000000	time 0.2351 (0.2050)	total_loss 6.4476 (6.5049)	loss 3.0802 (2.9687)	multi_label_loss 3.3674 (3.5362)	grad_norm 86.3726 (inf)	mem 4960MB
+[2023-11-07 13:43:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][960/180715]	eta 10:14:37 lr 0.000000	time 0.2090 (0.2052)	total_loss 6.5729 (6.5041)	loss 3.0093 (2.9682)	multi_label_loss 3.5636 (3.5360)	grad_norm 86.2509 (inf)	mem 4960MB
+[2023-11-07 13:43:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][970/180715]	eta 10:14:42 lr 0.000000	time 0.2016 (0.2052)	total_loss 6.3990 (6.5037)	loss 2.9058 (2.9682)	multi_label_loss 3.4932 (3.5356)	grad_norm 82.6781 (inf)	mem 4960MB
+[2023-11-07 13:43:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][980/180715]	eta 10:14:49 lr 0.000000	time 0.2050 (0.2052)	total_loss 6.5016 (6.5034)	loss 3.0285 (2.9681)	multi_label_loss 3.4731 (3.5353)	grad_norm 83.1895 (inf)	mem 4960MB
+[2023-11-07 13:43:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][990/180715]	eta 10:14:51 lr 0.000000	time 0.2605 (0.2053)	total_loss 6.5720 (6.5032)	loss 3.0645 (2.9679)	multi_label_loss 3.5075 (3.5353)	grad_norm 95.3795 (inf)	mem 4960MB
+[2023-11-07 13:43:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1000/180715]	eta 10:14:41 lr 0.000000	time 0.2003 (0.2052)	total_loss 6.1835 (6.5030)	loss 2.7968 (2.9678)	multi_label_loss 3.3867 (3.5352)	grad_norm 80.2517 (inf)	mem 4960MB
+[2023-11-07 13:43:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1010/180715]	eta 10:15:06 lr 0.000000	time 0.1947 (0.2054)	total_loss 6.6510 (6.5033)	loss 3.0474 (2.9680)	multi_label_loss 3.6036 (3.5353)	grad_norm 82.4385 (inf)	mem 4960MB
+[2023-11-07 13:43:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1020/180715]	eta 10:15:11 lr 0.000000	time 0.1993 (0.2054)	total_loss 6.6967 (6.5025)	loss 3.1057 (2.9674)	multi_label_loss 3.5909 (3.5351)	grad_norm 84.8110 (inf)	mem 4960MB
+[2023-11-07 13:43:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1030/180715]	eta 10:15:21 lr 0.000000	time 0.1981 (0.2055)	total_loss 6.3977 (6.5021)	loss 2.9115 (2.9671)	multi_label_loss 3.4862 (3.5350)	grad_norm 85.1016 (inf)	mem 4960MB
+[2023-11-07 13:43:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1040/180715]	eta 10:15:22 lr 0.000000	time 0.2022 (0.2055)	total_loss 6.6694 (6.5023)	loss 3.0717 (2.9673)	multi_label_loss 3.5977 (3.5350)	grad_norm 83.5826 (inf)	mem 4960MB
+[2023-11-07 13:43:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1050/180715]	eta 10:15:30 lr 0.000000	time 0.2031 (0.2056)	total_loss 6.7186 (6.5019)	loss 3.1026 (2.9672)	multi_label_loss 3.6161 (3.5347)	grad_norm 82.9698 (inf)	mem 4960MB
+[2023-11-07 13:43:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1060/180715]	eta 10:15:34 lr 0.000000	time 0.2042 (0.2056)	total_loss 6.7608 (6.5015)	loss 3.1093 (2.9667)	multi_label_loss 3.6514 (3.5348)	grad_norm 88.0056 (inf)	mem 4960MB
+[2023-11-07 13:43:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1070/180715]	eta 10:15:34 lr 0.000000	time 0.2029 (0.2056)	total_loss 6.5073 (6.5010)	loss 2.9839 (2.9663)	multi_label_loss 3.5234 (3.5347)	grad_norm 81.3785 (inf)	mem 4960MB
+[2023-11-07 13:43:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1080/180715]	eta 10:15:37 lr 0.000000	time 0.2480 (0.2056)	total_loss 6.4603 (6.5006)	loss 2.7997 (2.9659)	multi_label_loss 3.6606 (3.5347)	grad_norm 83.1288 (inf)	mem 4960MB
+[2023-11-07 13:43:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1090/180715]	eta 10:15:44 lr 0.000000	time 0.1981 (0.2057)	total_loss 6.1997 (6.5001)	loss 2.7301 (2.9656)	multi_label_loss 3.4696 (3.5346)	grad_norm 79.7305 (inf)	mem 4960MB
+[2023-11-07 13:44:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1100/180715]	eta 10:15:38 lr 0.000000	time 0.1990 (0.2057)	total_loss 6.5450 (6.4999)	loss 3.0379 (2.9655)	multi_label_loss 3.5071 (3.5343)	grad_norm 87.7932 (inf)	mem 4960MB
+[2023-11-07 13:44:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1110/180715]	eta 10:15:40 lr 0.000000	time 0.2397 (0.2057)	total_loss 6.5442 (6.4995)	loss 3.0952 (2.9652)	multi_label_loss 3.4489 (3.5343)	grad_norm 84.9650 (inf)	mem 4960MB
+[2023-11-07 13:44:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1120/180715]	eta 10:15:50 lr 0.000000	time 0.2108 (0.2057)	total_loss 6.4070 (6.4991)	loss 2.9056 (2.9651)	multi_label_loss 3.5014 (3.5341)	grad_norm 89.9320 (inf)	mem 4960MB
+[2023-11-07 13:44:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1130/180715]	eta 10:15:55 lr 0.000000	time 0.2300 (0.2058)	total_loss 6.5128 (6.4989)	loss 3.0653 (2.9648)	multi_label_loss 3.4475 (3.5341)	grad_norm 83.7858 (inf)	mem 4960MB
+[2023-11-07 13:44:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1140/180715]	eta 10:15:56 lr 0.000000	time 0.2080 (0.2058)	total_loss 6.5006 (6.4989)	loss 2.8647 (2.9650)	multi_label_loss 3.6359 (3.5339)	grad_norm 86.4156 (inf)	mem 4960MB
+[2023-11-07 13:44:11 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1150/180715]	eta 10:16:01 lr 0.000000	time 0.1976 (0.2058)	total_loss 6.7842 (6.4991)	loss 3.1288 (2.9653)	multi_label_loss 3.6554 (3.5338)	grad_norm 84.9711 (inf)	mem 4960MB
+[2023-11-07 13:44:13 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1160/180715]	eta 10:16:01 lr 0.000000	time 0.2099 (0.2058)	total_loss 6.2726 (6.4982)	loss 2.8154 (2.9646)	multi_label_loss 3.4572 (3.5337)	grad_norm 84.5851 (inf)	mem 4960MB
+[2023-11-07 13:44:15 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1170/180715]	eta 10:16:09 lr 0.000000	time 0.2020 (0.2059)	total_loss 6.4378 (6.4980)	loss 2.9580 (2.9645)	multi_label_loss 3.4797 (3.5335)	grad_norm 82.5818 (inf)	mem 4960MB
+[2023-11-07 13:44:17 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1180/180715]	eta 10:16:10 lr 0.000000	time 0.2013 (0.2059)	total_loss 6.5060 (6.4975)	loss 2.9127 (2.9641)	multi_label_loss 3.5932 (3.5334)	grad_norm 83.0919 (inf)	mem 4960MB
+[2023-11-07 13:44:19 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1190/180715]	eta 10:16:30 lr 0.000000	time 0.2104 (0.2060)	total_loss 6.4026 (6.4982)	loss 2.9651 (2.9649)	multi_label_loss 3.4375 (3.5333)	grad_norm 80.6014 (inf)	mem 4960MB
+[2023-11-07 13:44:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1200/180715]	eta 10:16:27 lr 0.000000	time 0.2070 (0.2060)	total_loss 6.3379 (6.4975)	loss 2.8373 (2.9647)	multi_label_loss 3.5006 (3.5328)	grad_norm 77.2050 (inf)	mem 4960MB
+[2023-11-07 13:44:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1210/180715]	eta 10:16:41 lr 0.000000	time 0.2067 (0.2061)	total_loss 6.3981 (6.4967)	loss 2.9507 (2.9643)	multi_label_loss 3.4475 (3.5324)	grad_norm 85.9330 (inf)	mem 4960MB
+[2023-11-07 13:44:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1220/180715]	eta 10:16:45 lr 0.000000	time 0.1979 (0.2062)	total_loss 6.7828 (6.4970)	loss 3.3299 (2.9648)	multi_label_loss 3.4529 (3.5322)	grad_norm 82.5361 (inf)	mem 4960MB
+[2023-11-07 13:44:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1230/180715]	eta 10:16:41 lr 0.000000	time 0.2480 (0.2062)	total_loss 6.4170 (6.4968)	loss 2.8699 (2.9649)	multi_label_loss 3.5471 (3.5319)	grad_norm 81.5326 (inf)	mem 4960MB
+[2023-11-07 13:44:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1240/180715]	eta 10:16:43 lr 0.000000	time 0.2003 (0.2062)	total_loss 6.7213 (6.4967)	loss 3.1516 (2.9650)	multi_label_loss 3.5697 (3.5317)	grad_norm 89.0350 (inf)	mem 4960MB
+[2023-11-07 13:44:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1250/180715]	eta 10:16:55 lr 0.000000	time 0.2285 (0.2063)	total_loss 6.4497 (6.4969)	loss 2.9266 (2.9648)	multi_label_loss 3.5231 (3.5321)	grad_norm 77.4259 (inf)	mem 4960MB
+[2023-11-07 13:44:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1260/180715]	eta 10:16:54 lr 0.000000	time 0.2009 (0.2063)	total_loss 6.4058 (6.4967)	loss 2.9344 (2.9646)	multi_label_loss 3.4714 (3.5321)	grad_norm 81.9046 (inf)	mem 4960MB
+[2023-11-07 13:44:36 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1270/180715]	eta 10:17:01 lr 0.000000	time 0.2384 (0.2063)	total_loss 6.5656 (6.4962)	loss 3.1066 (2.9646)	multi_label_loss 3.4589 (3.5316)	grad_norm 82.7309 (inf)	mem 4960MB
+[2023-11-07 13:44:38 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1280/180715]	eta 10:17:04 lr 0.000000	time 0.2001 (0.2063)	total_loss 6.4292 (6.4954)	loss 3.0743 (2.9642)	multi_label_loss 3.3550 (3.5312)	grad_norm 82.4340 (inf)	mem 4960MB
+[2023-11-07 13:44:40 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1290/180715]	eta 10:17:03 lr 0.000000	time 0.1976 (0.2063)	total_loss 6.4418 (6.4953)	loss 2.8736 (2.9642)	multi_label_loss 3.5682 (3.5311)	grad_norm 84.1703 (inf)	mem 4960MB
+[2023-11-07 13:44:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1300/180715]	eta 10:17:04 lr 0.000000	time 0.2404 (0.2064)	total_loss 6.6269 (6.4946)	loss 3.1112 (2.9639)	multi_label_loss 3.5157 (3.5306)	grad_norm 80.5310 (inf)	mem 4960MB
+[2023-11-07 13:44:45 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1310/180715]	eta 10:17:07 lr 0.000000	time 0.2103 (0.2064)	total_loss 6.3826 (6.4939)	loss 2.9021 (2.9638)	multi_label_loss 3.4805 (3.5302)	grad_norm 86.2013 (inf)	mem 4960MB
+[2023-11-07 13:44:47 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1320/180715]	eta 10:17:05 lr 0.000000	time 0.2002 (0.2064)	total_loss 6.7877 (6.4938)	loss 3.3315 (2.9641)	multi_label_loss 3.4562 (3.5297)	grad_norm 84.6859 (inf)	mem 4960MB
+[2023-11-07 13:44:49 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1330/180715]	eta 10:17:10 lr 0.000000	time 0.2031 (0.2064)	total_loss 6.7185 (6.4936)	loss 3.1805 (2.9640)	multi_label_loss 3.5380 (3.5296)	grad_norm 84.1025 (inf)	mem 4960MB
+[2023-11-07 13:44:51 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1340/180715]	eta 10:17:20 lr 0.000000	time 0.2016 (0.2065)	total_loss 6.1985 (6.4927)	loss 2.7972 (2.9635)	multi_label_loss 3.4013 (3.5292)	grad_norm 80.2503 (inf)	mem 4960MB
+[2023-11-07 13:44:53 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1350/180715]	eta 10:17:20 lr 0.000000	time 0.1992 (0.2065)	total_loss 6.5018 (6.4923)	loss 2.9640 (2.9633)	multi_label_loss 3.5378 (3.5290)	grad_norm 83.5186 (inf)	mem 4960MB
+[2023-11-07 13:44:55 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1360/180715]	eta 10:17:19 lr 0.000000	time 0.2061 (0.2065)	total_loss 6.6385 (6.4931)	loss 2.9694 (2.9637)	multi_label_loss 3.6691 (3.5294)	grad_norm 84.5150 (inf)	mem 4960MB
+[2023-11-07 13:44:57 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1370/180715]	eta 10:17:18 lr 0.000000	time 0.1998 (0.2065)	total_loss 6.9182 (6.4932)	loss 3.2886 (2.9639)	multi_label_loss 3.6296 (3.5293)	grad_norm 90.0530 (inf)	mem 4960MB
+[2023-11-07 13:44:59 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1380/180715]	eta 10:17:13 lr 0.000000	time 0.2031 (0.2065)	total_loss 6.1739 (6.4922)	loss 2.6530 (2.9633)	multi_label_loss 3.5209 (3.5290)	grad_norm 85.5446 (inf)	mem 4960MB
+[2023-11-07 13:45:01 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1390/180715]	eta 10:17:12 lr 0.000000	time 0.1973 (0.2065)	total_loss 6.6459 (6.4925)	loss 3.1812 (2.9638)	multi_label_loss 3.4647 (3.5287)	grad_norm 85.1968 (inf)	mem 4960MB
+[2023-11-07 13:45:03 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1400/180715]	eta 10:17:08 lr 0.000000	time 0.1979 (0.2065)	total_loss 6.6544 (6.4927)	loss 3.2062 (2.9642)	multi_label_loss 3.4481 (3.5285)	grad_norm 79.5896 (inf)	mem 4960MB
+[2023-11-07 13:45:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1410/180715]	eta 10:17:23 lr 0.000000	time 0.2075 (0.2066)	total_loss 6.5282 (6.4921)	loss 2.9725 (2.9636)	multi_label_loss 3.5557 (3.5285)	grad_norm 85.2555 (inf)	mem 4960MB
+[2023-11-07 13:45:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1420/180715]	eta 10:17:32 lr 0.000000	time 0.2523 (0.2067)	total_loss 6.5373 (6.4922)	loss 3.0340 (2.9639)	multi_label_loss 3.5033 (3.5283)	grad_norm 81.4160 (inf)	mem 4960MB
+[2023-11-07 13:45:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1430/180715]	eta 10:17:31 lr 0.000000	time 0.2026 (0.2067)	total_loss 6.4315 (6.4924)	loss 2.9679 (2.9641)	multi_label_loss 3.4636 (3.5283)	grad_norm 81.7666 (inf)	mem 4960MB
+[2023-11-07 13:45:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1440/180715]	eta 10:17:26 lr 0.000000	time 0.1994 (0.2066)	total_loss 6.5339 (6.4921)	loss 3.0033 (2.9638)	multi_label_loss 3.5306 (3.5284)	grad_norm 84.2030 (inf)	mem 4960MB
+[2023-11-07 13:45:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1450/180715]	eta 10:17:44 lr 0.000000	time 0.2061 (0.2068)	total_loss 6.1974 (6.4920)	loss 2.7913 (2.9637)	multi_label_loss 3.4061 (3.5283)	grad_norm 84.3542 (inf)	mem 4960MB
+[2023-11-07 13:45:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1460/180715]	eta 10:17:56 lr 0.000000	time 0.2023 (0.2068)	total_loss 6.8163 (6.4917)	loss 3.1960 (2.9637)	multi_label_loss 3.6203 (3.5280)	grad_norm 88.8399 (inf)	mem 4960MB
+[2023-11-07 13:45:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1470/180715]	eta 10:17:59 lr 0.000000	time 0.2081 (0.2069)	total_loss 6.4189 (6.4908)	loss 2.7773 (2.9631)	multi_label_loss 3.6416 (3.5277)	grad_norm 81.7295 (inf)	mem 4960MB
+[2023-11-07 13:45:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1480/180715]	eta 10:18:12 lr 0.000000	time 0.2707 (0.2069)	total_loss 6.4888 (6.4904)	loss 2.9277 (2.9628)	multi_label_loss 3.5611 (3.5276)	grad_norm 87.3766 (inf)	mem 4960MB
+[2023-11-07 13:45:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1490/180715]	eta 10:18:20 lr 0.000000	time 0.2032 (0.2070)	total_loss 6.1047 (6.4900)	loss 2.6393 (2.9624)	multi_label_loss 3.4654 (3.5275)	grad_norm 78.7994 (inf)	mem 4960MB
+[2023-11-07 13:45:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1500/180715]	eta 10:18:21 lr 0.000000	time 0.1997 (0.2070)	total_loss 6.4828 (6.4903)	loss 3.0597 (2.9628)	multi_label_loss 3.4231 (3.5274)	grad_norm 88.7862 (inf)	mem 4960MB
+[2023-11-07 13:45:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1510/180715]	eta 10:18:24 lr 0.000000	time 0.2061 (0.2071)	total_loss 6.4785 (6.4903)	loss 3.0600 (2.9631)	multi_label_loss 3.4185 (3.5273)	grad_norm 84.0707 (inf)	mem 4960MB
+[2023-11-07 13:45:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1520/180715]	eta 10:18:30 lr 0.000000	time 0.1966 (0.2071)	total_loss 6.2047 (6.4901)	loss 2.7405 (2.9631)	multi_label_loss 3.4642 (3.5270)	grad_norm 79.6834 (inf)	mem 4960MB
+[2023-11-07 13:45:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1530/180715]	eta 10:18:37 lr 0.000000	time 0.2507 (0.2071)	total_loss 6.3332 (6.4899)	loss 2.7790 (2.9631)	multi_label_loss 3.5542 (3.5269)	grad_norm 81.5284 (inf)	mem 4960MB
+[2023-11-07 13:45:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1540/180715]	eta 10:18:36 lr 0.000000	time 0.2044 (0.2072)	total_loss 6.4425 (6.4893)	loss 2.9829 (2.9628)	multi_label_loss 3.4596 (3.5264)	grad_norm 77.3340 (inf)	mem 4960MB
+[2023-11-07 13:45:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1550/180715]	eta 10:18:40 lr 0.000000	time 0.1960 (0.2072)	total_loss 6.5360 (6.4890)	loss 2.9886 (2.9630)	multi_label_loss 3.5475 (3.5260)	grad_norm 83.2896 (inf)	mem 4960MB
+[2023-11-07 13:45:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1560/180715]	eta 10:18:42 lr 0.000000	time 0.2026 (0.2072)	total_loss 6.4915 (6.4890)	loss 2.9858 (2.9631)	multi_label_loss 3.5057 (3.5260)	grad_norm 82.0235 (inf)	mem 4960MB
+[2023-11-07 13:45:40 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1570/180715]	eta 10:18:49 lr 0.000000	time 0.2052 (0.2073)	total_loss 6.4498 (6.4887)	loss 2.9838 (2.9630)	multi_label_loss 3.4660 (3.5257)	grad_norm 85.9868 (inf)	mem 4960MB
+[2023-11-07 13:45:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1580/180715]	eta 10:18:50 lr 0.000000	time 0.1965 (0.2073)	total_loss 6.3765 (6.4888)	loss 2.8170 (2.9633)	multi_label_loss 3.5594 (3.5255)	grad_norm 79.6485 (inf)	mem 4960MB
+[2023-11-07 13:45:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1590/180715]	eta 10:19:16 lr 0.000000	time 0.2071 (0.2074)	total_loss 6.4567 (6.4884)	loss 2.9506 (2.9632)	multi_label_loss 3.5061 (3.5252)	grad_norm 84.6061 (inf)	mem 4960MB
+[2023-11-07 13:45:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1600/180715]	eta 10:19:29 lr 0.000000	time 0.2520 (0.2075)	total_loss 6.4313 (6.4881)	loss 2.9982 (2.9630)	multi_label_loss 3.4331 (3.5251)	grad_norm 79.1338 (inf)	mem 4960MB
+[2023-11-07 13:45:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1610/180715]	eta 10:19:32 lr 0.000000	time 0.2031 (0.2075)	total_loss 6.4723 (6.4875)	loss 2.9345 (2.9627)	multi_label_loss 3.5379 (3.5248)	grad_norm 83.7413 (inf)	mem 4960MB
+[2023-11-07 13:45:51 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1620/180715]	eta 10:19:45 lr 0.000000	time 0.2058 (0.2076)	total_loss 6.4122 (6.4874)	loss 3.0018 (2.9630)	multi_label_loss 3.4104 (3.5245)	grad_norm 82.1774 (inf)	mem 4960MB
+[2023-11-07 13:45:53 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1630/180715]	eta 10:19:39 lr 0.000000	time 0.1974 (0.2076)	total_loss 6.4178 (6.4870)	loss 3.0387 (2.9627)	multi_label_loss 3.3791 (3.5243)	grad_norm 83.5814 (inf)	mem 4960MB
+[2023-11-07 13:45:55 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1640/180715]	eta 10:19:29 lr 0.000000	time 0.2039 (0.2076)	total_loss 6.3511 (6.4868)	loss 2.8969 (2.9625)	multi_label_loss 3.4543 (3.5244)	grad_norm 78.2159 (inf)	mem 4960MB
+[2023-11-07 13:45:57 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1650/180715]	eta 10:19:38 lr 0.000000	time 0.2031 (0.2076)	total_loss 6.3584 (6.4862)	loss 2.9198 (2.9620)	multi_label_loss 3.4386 (3.5241)	grad_norm 85.2007 (inf)	mem 4960MB
+[2023-11-07 13:45:59 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1660/180715]	eta 10:19:35 lr 0.000000	time 0.2112 (0.2076)	total_loss 6.4008 (6.4861)	loss 2.9059 (2.9622)	multi_label_loss 3.4949 (3.5239)	grad_norm 77.4104 (inf)	mem 4960MB
+[2023-11-07 13:46:01 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1670/180715]	eta 10:19:33 lr 0.000000	time 0.2101 (0.2076)	total_loss 6.4796 (6.4852)	loss 2.9747 (2.9617)	multi_label_loss 3.5048 (3.5235)	grad_norm 85.7296 (inf)	mem 4960MB
+[2023-11-07 13:46:03 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1680/180715]	eta 10:19:32 lr 0.000000	time 0.2049 (0.2076)	total_loss 6.2616 (6.4849)	loss 2.8027 (2.9614)	multi_label_loss 3.4589 (3.5235)	grad_norm 85.9948 (inf)	mem 4960MB
+[2023-11-07 13:46:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1690/180715]	eta 10:19:53 lr 0.000000	time 0.2054 (0.2078)	total_loss 6.4328 (6.4844)	loss 2.9073 (2.9613)	multi_label_loss 3.5255 (3.5231)	grad_norm 81.2133 (inf)	mem 4960MB
+[2023-11-07 13:46:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1700/180715]	eta 10:20:02 lr 0.000000	time 0.2026 (0.2078)	total_loss 6.5429 (6.4841)	loss 3.0750 (2.9612)	multi_label_loss 3.4680 (3.5229)	grad_norm 77.8727 (inf)	mem 4960MB
+[2023-11-07 13:46:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1710/180715]	eta 10:20:17 lr 0.000000	time 0.2457 (0.2079)	total_loss 6.1667 (6.4835)	loss 2.7371 (2.9607)	multi_label_loss 3.4296 (3.5227)	grad_norm 83.2679 (inf)	mem 4960MB
+[2023-11-07 13:46:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1720/180715]	eta 10:20:16 lr 0.000000	time 0.2090 (0.2079)	total_loss 6.3728 (6.4830)	loss 2.8999 (2.9605)	multi_label_loss 3.4729 (3.5225)	grad_norm 83.1340 (inf)	mem 4960MB
+[2023-11-07 13:46:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1730/180715]	eta 10:20:40 lr 0.000000	time 0.2059 (0.2081)	total_loss 6.5045 (6.4827)	loss 3.0237 (2.9604)	multi_label_loss 3.4808 (3.5223)	grad_norm 77.2771 (inf)	mem 4960MB
+[2023-11-07 13:46:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1740/180715]	eta 10:20:40 lr 0.000000	time 0.2509 (0.2081)	total_loss 6.5043 (6.4828)	loss 3.0978 (2.9608)	multi_label_loss 3.4065 (3.5221)	grad_norm 84.9342 (inf)	mem 4960MB
+[2023-11-07 13:46:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1750/180715]	eta 10:20:47 lr 0.000000	time 0.2045 (0.2081)	total_loss 6.3972 (6.4830)	loss 2.7938 (2.9607)	multi_label_loss 3.6034 (3.5223)	grad_norm 81.1786 (inf)	mem 4960MB
+[2023-11-07 13:46:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1760/180715]	eta 10:20:56 lr 0.000000	time 0.2003 (0.2082)	total_loss 6.4635 (6.4830)	loss 2.9485 (2.9608)	multi_label_loss 3.5150 (3.5221)	grad_norm 83.7344 (inf)	mem 4960MB
+[2023-11-07 13:46:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1770/180715]	eta 10:21:04 lr 0.000000	time 0.2032 (0.2082)	total_loss 6.6678 (6.4826)	loss 3.0167 (2.9606)	multi_label_loss 3.6511 (3.5220)	grad_norm 81.0829 (inf)	mem 4960MB
+[2023-11-07 13:46:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1780/180715]	eta 10:21:11 lr 0.000000	time 0.2468 (0.2083)	total_loss 6.3368 (6.4822)	loss 2.8211 (2.9605)	multi_label_loss 3.5157 (3.5217)	grad_norm 77.6823 (inf)	mem 4960MB
+[2023-11-07 13:46:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1790/180715]	eta 10:21:10 lr 0.000000	time 0.2026 (0.2083)	total_loss 6.4792 (6.4825)	loss 2.9675 (2.9609)	multi_label_loss 3.5116 (3.5216)	grad_norm 78.6431 (inf)	mem 4960MB
+[2023-11-07 13:46:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1800/180715]	eta 10:21:13 lr 0.000000	time 0.2030 (0.2083)	total_loss 6.5377 (6.4825)	loss 2.9568 (2.9609)	multi_label_loss 3.5809 (3.5216)	grad_norm 82.3873 (inf)	mem 4960MB
+[2023-11-07 13:46:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1810/180715]	eta 10:21:16 lr 0.000000	time 0.2000 (0.2084)	total_loss 6.5176 (6.4823)	loss 2.9157 (2.9610)	multi_label_loss 3.6018 (3.5213)	grad_norm 85.4442 (inf)	mem 4960MB
+[2023-11-07 13:46:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1820/180715]	eta 10:21:23 lr 0.000000	time 0.2092 (0.2084)	total_loss 6.5287 (6.4821)	loss 2.9807 (2.9609)	multi_label_loss 3.5480 (3.5212)	grad_norm 85.1973 (inf)	mem 4960MB
+[2023-11-07 13:46:36 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1830/180715]	eta 10:21:17 lr 0.000000	time 0.2379 (0.2084)	total_loss 6.3866 (6.4815)	loss 2.8717 (2.9606)	multi_label_loss 3.5149 (3.5209)	grad_norm 77.9612 (inf)	mem 4960MB
+[2023-11-07 13:46:38 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1840/180715]	eta 10:21:15 lr 0.000000	time 0.2221 (0.2084)	total_loss 6.5712 (6.4804)	loss 3.0874 (2.9599)	multi_label_loss 3.4837 (3.5205)	grad_norm 80.7752 (inf)	mem 4960MB
+[2023-11-07 13:46:40 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1850/180715]	eta 10:21:21 lr 0.000000	time 0.2461 (0.2084)	total_loss 6.3359 (6.4802)	loss 2.8881 (2.9600)	multi_label_loss 3.4478 (3.5203)	grad_norm 84.8592 (inf)	mem 4960MB
+[2023-11-07 13:46:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1860/180715]	eta 10:21:16 lr 0.000000	time 0.1978 (0.2084)	total_loss 6.2537 (6.4798)	loss 2.8108 (2.9599)	multi_label_loss 3.4428 (3.5199)	grad_norm 78.8172 (inf)	mem 4960MB
+[2023-11-07 13:46:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1870/180715]	eta 10:21:21 lr 0.000000	time 0.2386 (0.2085)	total_loss 6.4033 (6.4799)	loss 2.9599 (2.9600)	multi_label_loss 3.4434 (3.5199)	grad_norm 89.2730 (inf)	mem 4960MB
+[2023-11-07 13:46:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1880/180715]	eta 10:21:39 lr 0.000000	time 0.2855 (0.2086)	total_loss 6.2286 (6.4794)	loss 2.8775 (2.9598)	multi_label_loss 3.3510 (3.5196)	grad_norm 81.9791 (inf)	mem 4960MB
+[2023-11-07 13:46:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1890/180715]	eta 10:21:34 lr 0.000000	time 0.2004 (0.2086)	total_loss 6.4016 (6.4792)	loss 2.8916 (2.9598)	multi_label_loss 3.5100 (3.5194)	grad_norm 79.5002 (inf)	mem 4960MB
+[2023-11-07 13:46:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1900/180715]	eta 10:21:33 lr 0.000000	time 0.2024 (0.2086)	total_loss 6.3413 (6.4793)	loss 2.9537 (2.9600)	multi_label_loss 3.3877 (3.5193)	grad_norm 82.5876 (inf)	mem 4960MB
+[2023-11-07 13:46:53 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1910/180715]	eta 10:21:32 lr 0.000000	time 0.2389 (0.2086)	total_loss 6.3087 (6.4791)	loss 2.8353 (2.9599)	multi_label_loss 3.4734 (3.5191)	grad_norm 78.8574 (inf)	mem 4960MB
+[2023-11-07 13:46:55 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1920/180715]	eta 10:21:26 lr 0.000000	time 0.1998 (0.2085)	total_loss 6.7587 (6.4791)	loss 3.2383 (2.9600)	multi_label_loss 3.5204 (3.5191)	grad_norm 86.1886 (inf)	mem 4960MB
+[2023-11-07 13:46:57 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1930/180715]	eta 10:21:32 lr 0.000000	time 0.2026 (0.2086)	total_loss 6.3812 (6.4789)	loss 2.9347 (2.9601)	multi_label_loss 3.4465 (3.5187)	grad_norm 84.0689 (inf)	mem 4960MB
+[2023-11-07 13:46:59 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1940/180715]	eta 10:21:29 lr 0.000000	time 0.2033 (0.2086)	total_loss 6.6548 (6.4785)	loss 3.0834 (2.9599)	multi_label_loss 3.5713 (3.5186)	grad_norm 86.1511 (inf)	mem 4960MB
+[2023-11-07 13:47:01 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1950/180715]	eta 10:21:23 lr 0.000000	time 0.2053 (0.2086)	total_loss 6.6831 (6.4785)	loss 3.1250 (2.9598)	multi_label_loss 3.5581 (3.5186)	grad_norm 83.4410 (inf)	mem 4960MB
+[2023-11-07 13:47:03 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1960/180715]	eta 10:21:32 lr 0.000000	time 0.2489 (0.2086)	total_loss 6.6311 (6.4786)	loss 3.1267 (2.9601)	multi_label_loss 3.5044 (3.5185)	grad_norm 78.4669 (inf)	mem 4960MB
+[2023-11-07 13:47:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1970/180715]	eta 10:21:30 lr 0.000000	time 0.2002 (0.2086)	total_loss 6.3540 (6.4780)	loss 2.9641 (2.9598)	multi_label_loss 3.3899 (3.5182)	grad_norm 85.7646 (inf)	mem 4960MB
+[2023-11-07 13:47:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1980/180715]	eta 10:21:35 lr 0.000000	time 0.2388 (0.2087)	total_loss 6.5621 (6.4777)	loss 2.9887 (2.9597)	multi_label_loss 3.5734 (3.5179)	grad_norm 85.6713 (inf)	mem 4960MB
+[2023-11-07 13:47:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][1990/180715]	eta 10:21:36 lr 0.000000	time 0.2394 (0.2087)	total_loss 6.4048 (6.4775)	loss 2.9330 (2.9598)	multi_label_loss 3.4718 (3.5176)	grad_norm 80.9762 (inf)	mem 4960MB
+[2023-11-07 13:47:11 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2000/180715]	eta 10:21:31 lr 0.000000	time 0.2012 (0.2087)	total_loss 6.3433 (6.4772)	loss 2.8958 (2.9598)	multi_label_loss 3.4476 (3.5175)	grad_norm 79.4725 (inf)	mem 4960MB
+[2023-11-07 13:47:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2010/180715]	eta 10:21:37 lr 0.000000	time 0.2021 (0.2087)	total_loss 6.6839 (6.4770)	loss 3.1720 (2.9598)	multi_label_loss 3.5119 (3.5171)	grad_norm 82.7191 (inf)	mem 4960MB
+[2023-11-07 13:47:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2020/180715]	eta 10:21:35 lr 0.000000	time 0.2016 (0.2087)	total_loss 6.2915 (6.4769)	loss 2.8373 (2.9598)	multi_label_loss 3.4543 (3.5171)	grad_norm 78.2599 (inf)	mem 4960MB
+[2023-11-07 13:47:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2030/180715]	eta 10:21:41 lr 0.000000	time 0.2099 (0.2088)	total_loss 6.4365 (6.4765)	loss 3.0641 (2.9596)	multi_label_loss 3.3724 (3.5168)	grad_norm 80.8507 (inf)	mem 4960MB
+[2023-11-07 13:47:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2040/180715]	eta 10:21:50 lr 0.000000	time 0.2302 (0.2088)	total_loss 6.3541 (6.4763)	loss 2.9018 (2.9596)	multi_label_loss 3.4523 (3.5167)	grad_norm 76.7503 (inf)	mem 4960MB
+[2023-11-07 13:47:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2050/180715]	eta 10:21:57 lr 0.000000	time 0.2092 (0.2089)	total_loss 6.5687 (6.4757)	loss 3.0222 (2.9590)	multi_label_loss 3.5465 (3.5167)	grad_norm 79.8299 (inf)	mem 4960MB
+[2023-11-07 13:47:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2060/180715]	eta 10:21:54 lr 0.000000	time 0.2034 (0.2089)	total_loss 6.1647 (6.4751)	loss 2.7610 (2.9587)	multi_label_loss 3.4037 (3.5164)	grad_norm 76.5025 (inf)	mem 4960MB
+[2023-11-07 13:47:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2070/180715]	eta 10:21:51 lr 0.000000	time 0.2027 (0.2089)	total_loss 6.4036 (6.4749)	loss 2.9844 (2.9586)	multi_label_loss 3.4192 (3.5162)	grad_norm 89.1872 (inf)	mem 4960MB
+[2023-11-07 13:47:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2080/180715]	eta 10:22:00 lr 0.000000	time 0.2091 (0.2089)	total_loss 6.3796 (6.4748)	loss 2.9321 (2.9588)	multi_label_loss 3.4475 (3.5160)	grad_norm 82.6491 (inf)	mem 4960MB
+[2023-11-07 13:47:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2090/180715]	eta 10:21:59 lr 0.000000	time 0.1947 (0.2089)	total_loss 6.5801 (6.4747)	loss 3.1499 (2.9590)	multi_label_loss 3.4302 (3.5158)	grad_norm 86.9776 (inf)	mem 4960MB
+[2023-11-07 13:47:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2100/180715]	eta 10:21:54 lr 0.000000	time 0.2060 (0.2089)	total_loss 6.2094 (6.4744)	loss 2.8441 (2.9588)	multi_label_loss 3.3653 (3.5155)	grad_norm 80.8825 (inf)	mem 4960MB
+[2023-11-07 13:47:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2110/180715]	eta 10:21:51 lr 0.000000	time 0.1971 (0.2089)	total_loss 6.8891 (6.4741)	loss 3.2544 (2.9587)	multi_label_loss 3.6347 (3.5155)	grad_norm 90.0939 (inf)	mem 4960MB
+[2023-11-07 13:47:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2120/180715]	eta 10:21:51 lr 0.000000	time 0.2045 (0.2089)	total_loss 6.4834 (6.4740)	loss 2.9737 (2.9587)	multi_label_loss 3.5097 (3.5153)	grad_norm 77.5641 (inf)	mem 4960MB
+[2023-11-07 13:47:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2130/180715]	eta 10:21:45 lr 0.000000	time 0.2014 (0.2089)	total_loss 6.3626 (6.4736)	loss 2.9153 (2.9585)	multi_label_loss 3.4473 (3.5151)	grad_norm 81.0628 (inf)	mem 4960MB
+[2023-11-07 13:47:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2140/180715]	eta 10:21:41 lr 0.000000	time 0.2003 (0.2089)	total_loss 6.3297 (6.4733)	loss 2.8963 (2.9583)	multi_label_loss 3.4334 (3.5149)	grad_norm 80.9709 (inf)	mem 4960MB
+[2023-11-07 13:47:43 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2150/180715]	eta 10:21:45 lr 0.000000	time 0.2494 (0.2089)	total_loss 6.2567 (6.4732)	loss 2.7863 (2.9583)	multi_label_loss 3.4703 (3.5148)	grad_norm 80.0706 (inf)	mem 4960MB
+[2023-11-07 13:47:45 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2160/180715]	eta 10:21:40 lr 0.000000	time 0.2101 (0.2089)	total_loss 6.4266 (6.4730)	loss 2.8925 (2.9583)	multi_label_loss 3.5341 (3.5148)	grad_norm 83.3517 (inf)	mem 4960MB
+[2023-11-07 13:47:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2170/180715]	eta 10:21:43 lr 0.000000	time 0.1998 (0.2089)	total_loss 6.5770 (6.4725)	loss 3.1768 (2.9580)	multi_label_loss 3.4002 (3.5146)	grad_norm 83.2951 (inf)	mem 4960MB
+[2023-11-07 13:47:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2180/180715]	eta 10:21:38 lr 0.000000	time 0.1977 (0.2089)	total_loss 6.4482 (6.4725)	loss 3.0024 (2.9580)	multi_label_loss 3.4459 (3.5145)	grad_norm 81.8702 (inf)	mem 4960MB
+[2023-11-07 13:47:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2190/180715]	eta 10:21:32 lr 0.000000	time 0.2055 (0.2089)	total_loss 6.2934 (6.4721)	loss 2.8345 (2.9578)	multi_label_loss 3.4589 (3.5143)	grad_norm 86.4583 (inf)	mem 4960MB
+[2023-11-07 13:47:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2200/180715]	eta 10:21:31 lr 0.000000	time 0.2010 (0.2089)	total_loss 6.3808 (6.4721)	loss 2.8252 (2.9578)	multi_label_loss 3.5556 (3.5143)	grad_norm 75.3815 (inf)	mem 4960MB
+[2023-11-07 13:47:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2210/180715]	eta 10:21:33 lr 0.000000	time 0.1996 (0.2089)	total_loss 6.3560 (6.4715)	loss 2.8564 (2.9574)	multi_label_loss 3.4995 (3.5141)	grad_norm 78.9367 (inf)	mem 4960MB
+[2023-11-07 13:47:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2220/180715]	eta 10:21:43 lr 0.000000	time 0.2359 (0.2090)	total_loss 6.4380 (6.4715)	loss 2.8774 (2.9575)	multi_label_loss 3.5607 (3.5140)	grad_norm 77.5378 (inf)	mem 4960MB
+[2023-11-07 13:48:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2230/180715]	eta 10:21:43 lr 0.000000	time 0.1982 (0.2090)	total_loss 6.4802 (6.4709)	loss 3.0188 (2.9571)	multi_label_loss 3.4615 (3.5138)	grad_norm 78.9550 (inf)	mem 4960MB
+[2023-11-07 13:48:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2240/180715]	eta 10:21:46 lr 0.000000	time 0.2082 (0.2090)	total_loss 6.5694 (6.4709)	loss 3.0227 (2.9572)	multi_label_loss 3.5467 (3.5136)	grad_norm 86.3015 (inf)	mem 4960MB
+[2023-11-07 13:48:04 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2250/180715]	eta 10:21:46 lr 0.000000	time 0.2023 (0.2090)	total_loss 6.3213 (6.4703)	loss 2.8060 (2.9570)	multi_label_loss 3.5153 (3.5134)	grad_norm 79.1950 (inf)	mem 4960MB
+[2023-11-07 13:48:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2260/180715]	eta 10:21:46 lr 0.000000	time 0.2085 (0.2091)	total_loss 6.5062 (6.4700)	loss 2.9236 (2.9566)	multi_label_loss 3.5826 (3.5134)	grad_norm 81.3018 (inf)	mem 4960MB
+[2023-11-07 13:48:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2270/180715]	eta 10:21:48 lr 0.000000	time 0.2025 (0.2091)	total_loss 6.3565 (6.4698)	loss 2.9521 (2.9565)	multi_label_loss 3.4045 (3.5134)	grad_norm 81.1654 (inf)	mem 4960MB
+[2023-11-07 13:48:11 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2280/180715]	eta 10:21:47 lr 0.000000	time 0.2067 (0.2091)	total_loss 6.4083 (6.4693)	loss 2.9478 (2.9563)	multi_label_loss 3.4605 (3.5130)	grad_norm 87.7050 (inf)	mem 4960MB
+[2023-11-07 13:48:13 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2290/180715]	eta 10:21:49 lr 0.000000	time 0.2003 (0.2091)	total_loss 6.4152 (6.4691)	loss 3.0086 (2.9563)	multi_label_loss 3.4066 (3.5128)	grad_norm 90.5156 (inf)	mem 4960MB
+[2023-11-07 13:48:15 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2300/180715]	eta 10:21:44 lr 0.000000	time 0.2074 (0.2091)	total_loss 6.4115 (6.4687)	loss 3.0171 (2.9561)	multi_label_loss 3.3944 (3.5127)	grad_norm 79.4512 (inf)	mem 4960MB
+[2023-11-07 13:48:17 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2310/180715]	eta 10:21:49 lr 0.000000	time 0.2076 (0.2091)	total_loss 6.3409 (6.4689)	loss 2.9911 (2.9564)	multi_label_loss 3.3498 (3.5124)	grad_norm 77.6436 (inf)	mem 4960MB
+[2023-11-07 13:48:19 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2320/180715]	eta 10:21:51 lr 0.000000	time 0.2043 (0.2092)	total_loss 6.2827 (6.4688)	loss 2.7478 (2.9565)	multi_label_loss 3.5348 (3.5124)	grad_norm 73.0045 (inf)	mem 4960MB
+[2023-11-07 13:48:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2330/180715]	eta 10:21:42 lr 0.000000	time 0.2023 (0.2091)	total_loss 6.4926 (6.4684)	loss 2.9747 (2.9562)	multi_label_loss 3.5179 (3.5122)	grad_norm 84.4928 (inf)	mem 4960MB
+[2023-11-07 13:48:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2340/180715]	eta 10:21:35 lr 0.000000	time 0.1990 (0.2091)	total_loss 6.2693 (6.4679)	loss 2.8196 (2.9559)	multi_label_loss 3.4497 (3.5120)	grad_norm 79.4145 (inf)	mem 4960MB
+[2023-11-07 13:48:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2350/180715]	eta 10:21:39 lr 0.000000	time 0.2113 (0.2091)	total_loss 6.3830 (6.4678)	loss 2.8953 (2.9560)	multi_label_loss 3.4878 (3.5118)	grad_norm 83.2482 (inf)	mem 4960MB
+[2023-11-07 13:48:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2360/180715]	eta 10:21:51 lr 0.000000	time 0.2590 (0.2092)	total_loss 6.2203 (6.4671)	loss 2.7656 (2.9555)	multi_label_loss 3.4547 (3.5116)	grad_norm 82.2551 (inf)	mem 4960MB
+[2023-11-07 13:48:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2370/180715]	eta 10:21:49 lr 0.000000	time 0.2089 (0.2092)	total_loss 6.3760 (6.4668)	loss 2.9538 (2.9554)	multi_label_loss 3.4222 (3.5113)	grad_norm 79.2099 (inf)	mem 4960MB
+[2023-11-07 13:48:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2380/180715]	eta 10:21:51 lr 0.000000	time 0.2029 (0.2092)	total_loss 6.5557 (6.4666)	loss 3.0716 (2.9553)	multi_label_loss 3.4842 (3.5112)	grad_norm 92.9070 (inf)	mem 4960MB
+[2023-11-07 13:48:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2390/180715]	eta 10:22:01 lr 0.000000	time 0.2025 (0.2093)	total_loss 6.3534 (6.4661)	loss 3.0239 (2.9552)	multi_label_loss 3.3295 (3.5109)	grad_norm 76.7402 (inf)	mem 4960MB
+[2023-11-07 13:48:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2400/180715]	eta 10:22:04 lr 0.000000	time 0.1965 (0.2093)	total_loss 6.3739 (6.4661)	loss 2.9167 (2.9552)	multi_label_loss 3.4572 (3.5109)	grad_norm 84.6979 (inf)	mem 4960MB
+[2023-11-07 13:48:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2410/180715]	eta 10:22:01 lr 0.000000	time 0.2032 (0.2093)	total_loss 6.4279 (6.4659)	loss 2.9532 (2.9551)	multi_label_loss 3.4747 (3.5108)	grad_norm 80.4743 (inf)	mem 4960MB
+[2023-11-07 13:48:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2420/180715]	eta 10:22:01 lr 0.000000	time 0.2064 (0.2093)	total_loss 6.2518 (6.4654)	loss 2.9514 (2.9549)	multi_label_loss 3.3004 (3.5106)	grad_norm 79.9369 (inf)	mem 4960MB
+[2023-11-07 13:48:43 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2430/180715]	eta 10:22:00 lr 0.000000	time 0.2012 (0.2093)	total_loss 6.2903 (6.4650)	loss 2.7881 (2.9546)	multi_label_loss 3.5021 (3.5104)	grad_norm 77.1536 (inf)	mem 4960MB
+[2023-11-07 13:48:45 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2440/180715]	eta 10:21:59 lr 0.000000	time 0.1968 (0.2093)	total_loss 6.3767 (6.4645)	loss 2.8320 (2.9543)	multi_label_loss 3.5448 (3.5102)	grad_norm 77.1493 (inf)	mem 4960MB
+[2023-11-07 13:48:47 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2450/180715]	eta 10:21:59 lr 0.000000	time 0.2036 (0.2094)	total_loss 6.7612 (6.4641)	loss 3.2431 (2.9540)	multi_label_loss 3.5181 (3.5100)	grad_norm 85.2412 (inf)	mem 4960MB
+[2023-11-07 13:48:49 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2460/180715]	eta 10:21:57 lr 0.000000	time 0.2031 (0.2093)	total_loss 6.5935 (6.4641)	loss 3.0761 (2.9542)	multi_label_loss 3.5173 (3.5099)	grad_norm 81.7703 (inf)	mem 4960MB
+[2023-11-07 13:48:51 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2470/180715]	eta 10:21:56 lr 0.000000	time 0.2087 (0.2094)	total_loss 6.4369 (6.4639)	loss 2.9331 (2.9540)	multi_label_loss 3.5039 (3.5099)	grad_norm 76.9883 (inf)	mem 4960MB
+[2023-11-07 13:48:53 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2480/180715]	eta 10:22:01 lr 0.000000	time 0.2022 (0.2094)	total_loss 6.0821 (6.4633)	loss 2.6551 (2.9537)	multi_label_loss 3.4270 (3.5096)	grad_norm 81.3456 (inf)	mem 4960MB
+[2023-11-07 13:48:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2490/180715]	eta 10:21:59 lr 0.000000	time 0.2013 (0.2094)	total_loss 6.2341 (6.4632)	loss 2.7977 (2.9538)	multi_label_loss 3.4364 (3.5094)	grad_norm 76.6887 (inf)	mem 4960MB
+[2023-11-07 13:48:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2500/180715]	eta 10:21:56 lr 0.000000	time 0.1994 (0.2094)	total_loss 6.3562 (6.4630)	loss 2.8911 (2.9539)	multi_label_loss 3.4651 (3.5091)	grad_norm 77.6600 (inf)	mem 4960MB
+[2023-11-07 13:49:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2510/180715]	eta 10:21:51 lr 0.000000	time 0.2050 (0.2094)	total_loss 6.3453 (6.4627)	loss 2.7601 (2.9537)	multi_label_loss 3.5852 (3.5091)	grad_norm 82.1050 (inf)	mem 4960MB
+[2023-11-07 13:49:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2520/180715]	eta 10:21:57 lr 0.000000	time 0.2490 (0.2094)	total_loss 6.5192 (6.4629)	loss 2.9880 (2.9538)	multi_label_loss 3.5312 (3.5091)	grad_norm 86.6418 (inf)	mem 4960MB
+[2023-11-07 13:49:04 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2530/180715]	eta 10:21:47 lr 0.000000	time 0.1946 (0.2094)	total_loss 6.3627 (6.4624)	loss 2.9596 (2.9536)	multi_label_loss 3.4031 (3.5088)	grad_norm 77.7921 (inf)	mem 4960MB
+[2023-11-07 13:49:06 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2540/180715]	eta 10:21:48 lr 0.000000	time 0.2462 (0.2094)	total_loss 6.4691 (6.4623)	loss 2.9083 (2.9535)	multi_label_loss 3.5608 (3.5088)	grad_norm 80.0608 (inf)	mem 4960MB
+[2023-11-07 13:49:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2550/180715]	eta 10:21:45 lr 0.000000	time 0.2081 (0.2094)	total_loss 6.1817 (6.4620)	loss 2.7488 (2.9534)	multi_label_loss 3.4329 (3.5086)	grad_norm 81.2960 (inf)	mem 4960MB
+[2023-11-07 13:49:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2560/180715]	eta 10:21:47 lr 0.000000	time 0.2386 (0.2094)	total_loss 6.2874 (6.4619)	loss 2.8419 (2.9534)	multi_label_loss 3.4456 (3.5085)	grad_norm 81.5932 (inf)	mem 4960MB
+[2023-11-07 13:49:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2570/180715]	eta 10:21:52 lr 0.000000	time 0.2035 (0.2094)	total_loss 6.4496 (6.4617)	loss 2.9430 (2.9533)	multi_label_loss 3.5066 (3.5084)	grad_norm 83.1442 (inf)	mem 4960MB
+[2023-11-07 13:49:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2580/180715]	eta 10:21:47 lr 0.000000	time 0.2046 (0.2094)	total_loss 6.5700 (6.4616)	loss 3.0731 (2.9532)	multi_label_loss 3.4969 (3.5084)	grad_norm 78.2243 (inf)	mem 4960MB
+[2023-11-07 13:49:17 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2590/180715]	eta 10:21:52 lr 0.000000	time 0.2078 (0.2095)	total_loss 6.3202 (6.4611)	loss 2.9787 (2.9530)	multi_label_loss 3.3414 (3.5082)	grad_norm 77.1328 (inf)	mem 4960MB
+[2023-11-07 13:49:19 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2600/180715]	eta 10:21:45 lr 0.000000	time 0.1986 (0.2094)	total_loss 6.2034 (6.4607)	loss 2.8513 (2.9528)	multi_label_loss 3.3522 (3.5079)	grad_norm 78.4097 (inf)	mem 4960MB
+[2023-11-07 13:49:21 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2610/180715]	eta 10:21:50 lr 0.000000	time 0.1995 (0.2095)	total_loss 6.4256 (6.4601)	loss 2.8297 (2.9523)	multi_label_loss 3.5958 (3.5078)	grad_norm 79.9108 (inf)	mem 4960MB
+[2023-11-07 13:49:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2620/180715]	eta 10:21:48 lr 0.000000	time 0.2438 (0.2095)	total_loss 6.3662 (6.4596)	loss 2.8867 (2.9521)	multi_label_loss 3.4795 (3.5075)	grad_norm 83.4152 (inf)	mem 4960MB
+[2023-11-07 13:49:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2630/180715]	eta 10:21:45 lr 0.000000	time 0.1989 (0.2095)	total_loss 6.4066 (6.4594)	loss 2.9208 (2.9520)	multi_label_loss 3.4858 (3.5073)	grad_norm 79.9339 (inf)	mem 4960MB
+[2023-11-07 13:49:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2640/180715]	eta 10:21:40 lr 0.000000	time 0.1988 (0.2095)	total_loss 6.1932 (6.4588)	loss 2.7163 (2.9516)	multi_label_loss 3.4768 (3.5072)	grad_norm 80.1597 (inf)	mem 4960MB
+[2023-11-07 13:49:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2650/180715]	eta 10:21:37 lr 0.000000	time 0.2015 (0.2095)	total_loss 6.4454 (6.4588)	loss 3.0033 (2.9517)	multi_label_loss 3.4422 (3.5071)	grad_norm 82.9703 (inf)	mem 4960MB
+[2023-11-07 13:49:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2660/180715]	eta 10:21:36 lr 0.000000	time 0.2077 (0.2095)	total_loss 6.2205 (6.4583)	loss 2.8118 (2.9513)	multi_label_loss 3.4086 (3.5070)	grad_norm 80.2831 (inf)	mem 4960MB
+[2023-11-07 13:49:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2670/180715]	eta 10:21:42 lr 0.000000	time 0.2033 (0.2095)	total_loss 6.5770 (6.4582)	loss 2.9365 (2.9512)	multi_label_loss 3.6406 (3.5070)	grad_norm 78.0352 (inf)	mem 4960MB
+[2023-11-07 13:49:36 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2680/180715]	eta 10:21:48 lr 0.000000	time 0.2107 (0.2096)	total_loss 6.1866 (6.4580)	loss 2.7828 (2.9512)	multi_label_loss 3.4038 (3.5068)	grad_norm 79.0906 (inf)	mem 4960MB
+[2023-11-07 13:49:38 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2690/180715]	eta 10:21:47 lr 0.000000	time 0.2012 (0.2096)	total_loss 6.3843 (6.4578)	loss 2.8991 (2.9513)	multi_label_loss 3.4852 (3.5066)	grad_norm 81.3829 (inf)	mem 4960MB
+[2023-11-07 13:49:40 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2700/180715]	eta 10:21:44 lr 0.000000	time 0.2117 (0.2096)	total_loss 6.4809 (6.4578)	loss 3.1054 (2.9514)	multi_label_loss 3.3755 (3.5063)	grad_norm 82.3084 (inf)	mem 4960MB
+[2023-11-07 13:49:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2710/180715]	eta 10:21:40 lr 0.000000	time 0.2055 (0.2095)	total_loss 6.5552 (6.4572)	loss 3.0481 (2.9511)	multi_label_loss 3.5072 (3.5062)	grad_norm 80.4489 (inf)	mem 4960MB
+[2023-11-07 13:49:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2720/180715]	eta 10:21:43 lr 0.000000	time 0.2069 (0.2096)	total_loss 6.3770 (6.4569)	loss 2.9109 (2.9509)	multi_label_loss 3.4660 (3.5060)	grad_norm 77.9553 (inf)	mem 4960MB
+[2023-11-07 13:49:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2730/180715]	eta 10:21:46 lr 0.000000	time 0.2097 (0.2096)	total_loss 6.3638 (6.4566)	loss 2.8798 (2.9507)	multi_label_loss 3.4839 (3.5058)	grad_norm 77.1352 (inf)	mem 4960MB
+[2023-11-07 13:49:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2740/180715]	eta 10:21:41 lr 0.000000	time 0.1996 (0.2096)	total_loss 6.1939 (6.4561)	loss 2.8503 (2.9506)	multi_label_loss 3.3436 (3.5056)	grad_norm 80.5345 (inf)	mem 4960MB
+[2023-11-07 13:49:51 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2750/180715]	eta 10:21:50 lr 0.000000	time 0.2490 (0.2097)	total_loss 6.3821 (6.4559)	loss 2.8583 (2.9504)	multi_label_loss 3.5239 (3.5055)	grad_norm 74.9807 (inf)	mem 4960MB
+[2023-11-07 13:49:53 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2760/180715]	eta 10:21:53 lr 0.000000	time 0.2007 (0.2097)	total_loss 6.3726 (6.4557)	loss 2.9025 (2.9504)	multi_label_loss 3.4701 (3.5053)	grad_norm 78.8593 (inf)	mem 4960MB
+[2023-11-07 13:49:55 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2770/180715]	eta 10:21:49 lr 0.000000	time 0.1973 (0.2097)	total_loss 6.4318 (6.4555)	loss 2.9387 (2.9504)	multi_label_loss 3.4931 (3.5051)	grad_norm 77.4356 (inf)	mem 4960MB
+[2023-11-07 13:49:57 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2780/180715]	eta 10:21:51 lr 0.000000	time 0.2026 (0.2097)	total_loss 6.4723 (6.4555)	loss 2.8800 (2.9504)	multi_label_loss 3.5922 (3.5051)	grad_norm 82.3016 (inf)	mem 4960MB
+[2023-11-07 13:49:59 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2790/180715]	eta 10:21:53 lr 0.000000	time 0.1997 (0.2097)	total_loss 6.2865 (6.4554)	loss 2.8215 (2.9504)	multi_label_loss 3.4650 (3.5050)	grad_norm 88.1565 (inf)	mem 4960MB
+[2023-11-07 13:50:01 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2800/180715]	eta 10:21:50 lr 0.000000	time 0.2047 (0.2097)	total_loss 6.0633 (6.4550)	loss 2.6588 (2.9501)	multi_label_loss 3.4045 (3.5049)	grad_norm 78.3433 (inf)	mem 4960MB
+[2023-11-07 13:50:03 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2810/180715]	eta 10:21:50 lr 0.000000	time 0.2023 (0.2097)	total_loss 6.4459 (6.4546)	loss 2.9576 (2.9499)	multi_label_loss 3.4883 (3.5047)	grad_norm 79.6862 (inf)	mem 4960MB
+[2023-11-07 13:50:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2820/180715]	eta 10:21:43 lr 0.000000	time 0.2080 (0.2097)	total_loss 6.3257 (6.4545)	loss 2.8758 (2.9498)	multi_label_loss 3.4499 (3.5046)	grad_norm 77.0636 (inf)	mem 4960MB
+[2023-11-07 13:50:08 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2830/180715]	eta 10:21:41 lr 0.000000	time 0.1996 (0.2097)	total_loss 6.5195 (6.4543)	loss 3.0898 (2.9498)	multi_label_loss 3.4297 (3.5045)	grad_norm 79.0010 (inf)	mem 4960MB
+[2023-11-07 13:50:10 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2840/180715]	eta 10:21:41 lr 0.000000	time 0.2107 (0.2097)	total_loss 6.3656 (6.4539)	loss 2.9768 (2.9496)	multi_label_loss 3.3888 (3.5043)	grad_norm 77.1767 (inf)	mem 4960MB
+[2023-11-07 13:50:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2850/180715]	eta 10:21:42 lr 0.000000	time 0.2165 (0.2097)	total_loss 6.3630 (6.4535)	loss 2.8991 (2.9495)	multi_label_loss 3.4638 (3.5040)	grad_norm 78.3419 (inf)	mem 4960MB
+[2023-11-07 13:50:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2860/180715]	eta 10:21:41 lr 0.000000	time 0.2006 (0.2097)	total_loss 6.3604 (6.4531)	loss 2.9631 (2.9493)	multi_label_loss 3.3973 (3.5038)	grad_norm 79.9098 (inf)	mem 4960MB
+[2023-11-07 13:50:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2870/180715]	eta 10:21:39 lr 0.000000	time 0.2039 (0.2097)	total_loss 6.4315 (6.4527)	loss 2.9595 (2.9491)	multi_label_loss 3.4719 (3.5036)	grad_norm 83.4047 (inf)	mem 4960MB
+[2023-11-07 13:50:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2880/180715]	eta 10:21:42 lr 0.000000	time 0.2002 (0.2098)	total_loss 6.3455 (6.4527)	loss 2.8850 (2.9492)	multi_label_loss 3.4605 (3.5035)	grad_norm 80.3439 (inf)	mem 4960MB
+[2023-11-07 13:50:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2890/180715]	eta 10:21:43 lr 0.000000	time 0.2446 (0.2098)	total_loss 6.4188 (6.4524)	loss 3.0020 (2.9490)	multi_label_loss 3.4168 (3.5034)	grad_norm 75.1479 (inf)	mem 4960MB
+[2023-11-07 13:50:23 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2900/180715]	eta 10:21:41 lr 0.000000	time 0.2117 (0.2098)	total_loss 6.5691 (6.4519)	loss 3.0652 (2.9486)	multi_label_loss 3.5039 (3.5032)	grad_norm 78.4527 (inf)	mem 4960MB
+[2023-11-07 13:50:25 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2910/180715]	eta 10:21:35 lr 0.000000	time 0.2012 (0.2098)	total_loss 6.3039 (6.4517)	loss 2.8545 (2.9487)	multi_label_loss 3.4494 (3.5030)	grad_norm 78.0704 (inf)	mem 4960MB
+[2023-11-07 13:50:27 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2920/180715]	eta 10:21:33 lr 0.000000	time 0.2082 (0.2098)	total_loss 6.2696 (6.4513)	loss 2.8336 (2.9486)	multi_label_loss 3.4361 (3.5028)	grad_norm 84.1104 (inf)	mem 4960MB
+[2023-11-07 13:50:29 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2930/180715]	eta 10:21:41 lr 0.000000	time 0.2128 (0.2098)	total_loss 6.5944 (6.4514)	loss 3.0575 (2.9487)	multi_label_loss 3.5369 (3.5027)	grad_norm 84.2454 (inf)	mem 4960MB
+[2023-11-07 13:50:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2940/180715]	eta 10:21:44 lr 0.000000	time 0.2070 (0.2098)	total_loss 6.4957 (6.4510)	loss 3.0239 (2.9486)	multi_label_loss 3.4718 (3.5024)	grad_norm 82.9814 (inf)	mem 4960MB
+[2023-11-07 13:50:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2950/180715]	eta 10:21:47 lr 0.000000	time 0.2371 (0.2099)	total_loss 6.3192 (6.4507)	loss 2.8292 (2.9485)	multi_label_loss 3.4900 (3.5022)	grad_norm 76.8172 (inf)	mem 4960MB
+[2023-11-07 13:50:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2960/180715]	eta 10:21:43 lr 0.000000	time 0.2062 (0.2099)	total_loss 6.0409 (6.4504)	loss 2.5770 (2.9482)	multi_label_loss 3.4639 (3.5022)	grad_norm 75.3242 (inf)	mem 4960MB
+[2023-11-07 13:50:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2970/180715]	eta 10:21:40 lr 0.000000	time 0.1994 (0.2099)	total_loss 6.3888 (6.4502)	loss 2.9144 (2.9481)	multi_label_loss 3.4744 (3.5021)	grad_norm 77.2369 (inf)	mem 4960MB
+[2023-11-07 13:50:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2980/180715]	eta 10:21:33 lr 0.000000	time 0.1979 (0.2098)	total_loss 6.3672 (6.4500)	loss 2.8932 (2.9480)	multi_label_loss 3.4740 (3.5019)	grad_norm 77.1567 (inf)	mem 4960MB
+[2023-11-07 13:50:42 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][2990/180715]	eta 10:21:34 lr 0.000000	time 0.1973 (0.2098)	total_loss 6.3009 (6.4499)	loss 2.7464 (2.9480)	multi_label_loss 3.5545 (3.5019)	grad_norm 82.1762 (inf)	mem 4960MB
+[2023-11-07 13:50:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3000/180715]	eta 10:21:30 lr 0.000000	time 0.1975 (0.2098)	total_loss 6.5502 (6.4499)	loss 3.1505 (2.9482)	multi_label_loss 3.3997 (3.5017)	grad_norm 79.5963 (inf)	mem 4960MB
+[2023-11-07 13:50:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3010/180715]	eta 10:21:27 lr 0.000000	time 0.2075 (0.2098)	total_loss 6.2554 (6.4495)	loss 2.7841 (2.9480)	multi_label_loss 3.4713 (3.5015)	grad_norm 72.5323 (inf)	mem 4960MB
+[2023-11-07 13:50:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3020/180715]	eta 10:21:25 lr 0.000000	time 0.2086 (0.2098)	total_loss 6.1455 (6.4492)	loss 2.7588 (2.9479)	multi_label_loss 3.3867 (3.5013)	grad_norm 74.2937 (inf)	mem 4960MB
+[2023-11-07 13:50:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3030/180715]	eta 10:21:26 lr 0.000000	time 0.2072 (0.2098)	total_loss 6.5669 (6.4489)	loss 3.1862 (2.9478)	multi_label_loss 3.3807 (3.5011)	grad_norm 77.0079 (inf)	mem 4960MB
+[2023-11-07 13:50:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3040/180715]	eta 10:21:23 lr 0.000000	time 0.2136 (0.2098)	total_loss 6.0660 (6.4485)	loss 2.7463 (2.9477)	multi_label_loss 3.3197 (3.5008)	grad_norm 73.9855 (inf)	mem 4960MB
+[2023-11-07 13:50:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3050/180715]	eta 10:21:25 lr 0.000000	time 0.2005 (0.2099)	total_loss 6.2423 (6.4482)	loss 2.8635 (2.9475)	multi_label_loss 3.3788 (3.5007)	grad_norm 80.7800 (inf)	mem 4960MB
+[2023-11-07 13:50:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3060/180715]	eta 10:21:29 lr 0.000000	time 0.2574 (0.2099)	total_loss 6.4261 (6.4479)	loss 3.0108 (2.9474)	multi_label_loss 3.4153 (3.5005)	grad_norm 87.3033 (inf)	mem 4960MB
+[2023-11-07 13:50:59 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3070/180715]	eta 10:21:30 lr 0.000000	time 0.2335 (0.2099)	total_loss 6.3678 (6.4475)	loss 2.9393 (2.9472)	multi_label_loss 3.4285 (3.5003)	grad_norm 77.4527 (inf)	mem 4960MB
+[2023-11-07 13:51:01 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3080/180715]	eta 10:21:33 lr 0.000000	time 0.2464 (0.2099)	total_loss 6.2942 (6.4473)	loss 2.8179 (2.9471)	multi_label_loss 3.4764 (3.5002)	grad_norm 76.1711 (inf)	mem 4960MB
+[2023-11-07 13:51:03 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3090/180715]	eta 10:21:27 lr 0.000000	time 0.2074 (0.2099)	total_loss 6.4070 (6.4471)	loss 2.9179 (2.9469)	multi_label_loss 3.4891 (3.5001)	grad_norm 77.9157 (inf)	mem 4960MB
+[2023-11-07 13:51:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3100/180715]	eta 10:21:21 lr 0.000000	time 0.1992 (0.2099)	total_loss 6.3695 (6.4467)	loss 2.9214 (2.9468)	multi_label_loss 3.4481 (3.4999)	grad_norm 80.7272 (inf)	mem 4960MB
+[2023-11-07 13:51:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3110/180715]	eta 10:21:28 lr 0.000000	time 0.2490 (0.2100)	total_loss 6.2219 (6.4465)	loss 2.8052 (2.9467)	multi_label_loss 3.4168 (3.4998)	grad_norm 81.8829 (inf)	mem 4960MB
+[2023-11-07 13:51:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3120/180715]	eta 10:21:28 lr 0.000000	time 0.1992 (0.2100)	total_loss 6.5811 (6.4464)	loss 3.0793 (2.9467)	multi_label_loss 3.5018 (3.4997)	grad_norm 85.6429 (inf)	mem 4960MB
+[2023-11-07 13:51:11 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3130/180715]	eta 10:21:29 lr 0.000000	time 0.2158 (0.2100)	total_loss 6.2669 (6.4462)	loss 2.7555 (2.9466)	multi_label_loss 3.5113 (3.4995)	grad_norm 86.6880 (inf)	mem 4960MB
+[2023-11-07 13:51:13 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3140/180715]	eta 10:21:23 lr 0.000000	time 0.2045 (0.2100)	total_loss 6.5142 (6.4459)	loss 2.9525 (2.9466)	multi_label_loss 3.5617 (3.4993)	grad_norm 75.5526 (inf)	mem 4960MB
+[2023-11-07 13:51:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3150/180715]	eta 10:21:21 lr 0.000000	time 0.1985 (0.2100)	total_loss 6.4113 (6.4455)	loss 2.9795 (2.9464)	multi_label_loss 3.4318 (3.4992)	grad_norm 84.2124 (inf)	mem 4960MB
+[2023-11-07 13:51:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3160/180715]	eta 10:21:17 lr 0.000000	time 0.1984 (0.2099)	total_loss 6.4345 (6.4454)	loss 3.0410 (2.9463)	multi_label_loss 3.3934 (3.4990)	grad_norm 79.8242 (inf)	mem 4960MB
+[2023-11-07 13:51:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3170/180715]	eta 10:21:12 lr 0.000000	time 0.2109 (0.2099)	total_loss 6.2346 (6.4451)	loss 2.7402 (2.9461)	multi_label_loss 3.4944 (3.4990)	grad_norm 85.0884 (inf)	mem 4960MB
+[2023-11-07 13:51:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3180/180715]	eta 10:21:12 lr 0.000000	time 0.2024 (0.2099)	total_loss 6.2966 (6.4446)	loss 2.8872 (2.9459)	multi_label_loss 3.4094 (3.4987)	grad_norm 75.2396 (inf)	mem 4960MB
+[2023-11-07 13:51:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3190/180715]	eta 10:21:07 lr 0.000000	time 0.2034 (0.2099)	total_loss 6.5114 (6.4444)	loss 2.9378 (2.9459)	multi_label_loss 3.5736 (3.4986)	grad_norm 81.0691 (inf)	mem 4960MB
+[2023-11-07 13:51:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3200/180715]	eta 10:21:07 lr 0.000000	time 0.2062 (0.2099)	total_loss 6.5735 (6.4440)	loss 3.0519 (2.9456)	multi_label_loss 3.5217 (3.4984)	grad_norm 75.1465 (inf)	mem 4960MB
+[2023-11-07 13:51:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3210/180715]	eta 10:21:06 lr 0.000000	time 0.2596 (0.2099)	total_loss 6.6484 (6.4436)	loss 3.0625 (2.9454)	multi_label_loss 3.5859 (3.4982)	grad_norm 76.0478 (inf)	mem 4960MB
+[2023-11-07 13:51:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3220/180715]	eta 10:21:05 lr 0.000000	time 0.2045 (0.2100)	total_loss 6.1589 (6.4431)	loss 2.7457 (2.9450)	multi_label_loss 3.4133 (3.4980)	grad_norm 77.9350 (inf)	mem 4960MB
+[2023-11-07 13:51:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3230/180715]	eta 10:21:03 lr 0.000000	time 0.2041 (0.2100)	total_loss 6.1689 (6.4424)	loss 2.8197 (2.9447)	multi_label_loss 3.3491 (3.4977)	grad_norm 79.2161 (inf)	mem 4960MB
+[2023-11-07 13:51:34 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3240/180715]	eta 10:21:04 lr 0.000000	time 0.1995 (0.2100)	total_loss 6.3441 (6.4422)	loss 2.9299 (2.9446)	multi_label_loss 3.4142 (3.4976)	grad_norm 81.2216 (inf)	mem 4960MB
+[2023-11-07 13:51:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3250/180715]	eta 10:21:06 lr 0.000000	time 0.2054 (0.2100)	total_loss 6.3665 (6.4421)	loss 2.9895 (2.9447)	multi_label_loss 3.3771 (3.4974)	grad_norm 79.3614 (inf)	mem 4960MB
+[2023-11-07 13:51:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3260/180715]	eta 10:21:04 lr 0.000000	time 0.2106 (0.2100)	total_loss 6.4679 (6.4417)	loss 2.9090 (2.9444)	multi_label_loss 3.5589 (3.4973)	grad_norm 78.5999 (inf)	mem 4960MB
+[2023-11-07 13:51:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3270/180715]	eta 10:21:05 lr 0.000000	time 0.1987 (0.2100)	total_loss 5.9813 (6.4411)	loss 2.5894 (2.9440)	multi_label_loss 3.3919 (3.4971)	grad_norm 72.5610 (inf)	mem 4960MB
+[2023-11-07 13:51:43 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3280/180715]	eta 10:21:13 lr 0.000000	time 0.2093 (0.2101)	total_loss 6.3720 (6.4408)	loss 2.9717 (2.9437)	multi_label_loss 3.4003 (3.4971)	grad_norm 75.9344 (inf)	mem 4960MB
+[2023-11-07 13:51:45 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3290/180715]	eta 10:21:16 lr 0.000000	time 0.2816 (0.2101)	total_loss 6.4547 (6.4405)	loss 3.0561 (2.9435)	multi_label_loss 3.3986 (3.4970)	grad_norm 77.4732 (inf)	mem 4960MB
+[2023-11-07 13:51:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3300/180715]	eta 10:21:15 lr 0.000000	time 0.2123 (0.2101)	total_loss 6.4077 (6.4401)	loss 2.9003 (2.9432)	multi_label_loss 3.5074 (3.4968)	grad_norm 84.2063 (inf)	mem 4960MB
+[2023-11-07 13:51:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3310/180715]	eta 10:21:24 lr 0.000000	time 0.2795 (0.2102)	total_loss 6.1447 (6.4398)	loss 2.8413 (2.9431)	multi_label_loss 3.3034 (3.4967)	grad_norm 75.2430 (inf)	mem 4960MB
+[2023-11-07 13:51:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3320/180715]	eta 10:21:24 lr 0.000000	time 0.2038 (0.2102)	total_loss 6.0713 (6.4397)	loss 2.7388 (2.9431)	multi_label_loss 3.3325 (3.4966)	grad_norm 74.5241 (inf)	mem 4960MB
+[2023-11-07 13:51:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3330/180715]	eta 10:21:25 lr 0.000000	time 0.2168 (0.2102)	total_loss 6.5445 (6.4396)	loss 2.9975 (2.9431)	multi_label_loss 3.5470 (3.4965)	grad_norm 80.5185 (inf)	mem 4960MB
+[2023-11-07 13:51:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3340/180715]	eta 10:21:22 lr 0.000000	time 0.2084 (0.2102)	total_loss 6.3531 (6.4394)	loss 3.0404 (2.9431)	multi_label_loss 3.3127 (3.4963)	grad_norm 76.9020 (inf)	mem 4960MB
+[2023-11-07 13:51:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3350/180715]	eta 10:21:18 lr 0.000000	time 0.1995 (0.2102)	total_loss 6.5245 (6.4393)	loss 3.0651 (2.9432)	multi_label_loss 3.4594 (3.4961)	grad_norm 75.7560 (inf)	mem 4960MB
+[2023-11-07 13:52:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3360/180715]	eta 10:21:14 lr 0.000000	time 0.2022 (0.2102)	total_loss 6.4152 (6.4391)	loss 2.9624 (2.9431)	multi_label_loss 3.4528 (3.4960)	grad_norm 76.3334 (inf)	mem 4960MB
+[2023-11-07 13:52:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3370/180715]	eta 10:21:13 lr 0.000000	time 0.2044 (0.2102)	total_loss 6.5256 (6.4389)	loss 3.0150 (2.9429)	multi_label_loss 3.5107 (3.4960)	grad_norm 76.7936 (inf)	mem 4960MB
+[2023-11-07 13:52:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3380/180715]	eta 10:21:14 lr 0.000000	time 0.1972 (0.2102)	total_loss 6.5600 (6.4387)	loss 3.1572 (2.9429)	multi_label_loss 3.4028 (3.4959)	grad_norm 79.7513 (inf)	mem 4960MB
+[2023-11-07 13:52:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3390/180715]	eta 10:21:15 lr 0.000000	time 0.2026 (0.2102)	total_loss 6.3788 (6.4386)	loss 2.9410 (2.9429)	multi_label_loss 3.4378 (3.4958)	grad_norm 82.0474 (inf)	mem 4960MB
+[2023-11-07 13:52:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3400/180715]	eta 10:21:11 lr 0.000000	time 0.2001 (0.2102)	total_loss 6.5751 (6.4386)	loss 3.0414 (2.9429)	multi_label_loss 3.5337 (3.4957)	grad_norm 85.0315 (inf)	mem 4960MB
+[2023-11-07 13:52:11 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3410/180715]	eta 10:21:10 lr 0.000000	time 0.2055 (0.2102)	total_loss 6.0953 (6.4381)	loss 2.7186 (2.9426)	multi_label_loss 3.3767 (3.4955)	grad_norm 73.9365 (inf)	mem 4960MB
+[2023-11-07 13:52:13 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3420/180715]	eta 10:21:07 lr 0.000000	time 0.2547 (0.2102)	total_loss 6.6186 (6.4380)	loss 3.0559 (2.9426)	multi_label_loss 3.5627 (3.4954)	grad_norm 77.4416 (inf)	mem 4960MB
+[2023-11-07 13:52:15 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3430/180715]	eta 10:21:17 lr 0.000000	time 0.2059 (0.2103)	total_loss 6.3794 (6.4376)	loss 2.9204 (2.9424)	multi_label_loss 3.4590 (3.4952)	grad_norm 80.4954 (inf)	mem 4960MB
+[2023-11-07 13:52:17 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3440/180715]	eta 10:21:15 lr 0.000000	time 0.2001 (0.2103)	total_loss 6.6105 (6.4375)	loss 3.0852 (2.9425)	multi_label_loss 3.5253 (3.4950)	grad_norm 73.8419 (inf)	mem 4960MB
+[2023-11-07 13:52:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3450/180715]	eta 10:21:10 lr 0.000000	time 0.2015 (0.2103)	total_loss 5.9952 (6.4371)	loss 2.5769 (2.9422)	multi_label_loss 3.4183 (3.4949)	grad_norm 82.8347 (inf)	mem 4960MB
+[2023-11-07 13:52:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3460/180715]	eta 10:21:09 lr 0.000000	time 0.2201 (0.2103)	total_loss 6.3348 (6.4368)	loss 2.8244 (2.9420)	multi_label_loss 3.5104 (3.4949)	grad_norm 78.5131 (inf)	mem 4960MB
+[2023-11-07 13:52:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3470/180715]	eta 10:21:10 lr 0.000000	time 0.2027 (0.2103)	total_loss 6.3367 (6.4366)	loss 2.8666 (2.9418)	multi_label_loss 3.4701 (3.4947)	grad_norm 76.3835 (inf)	mem 4960MB
+[2023-11-07 13:52:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3480/180715]	eta 10:21:11 lr 0.000000	time 0.2054 (0.2103)	total_loss 6.3124 (6.4361)	loss 2.7167 (2.9415)	multi_label_loss 3.5957 (3.4946)	grad_norm 83.4535 (inf)	mem 4960MB
+[2023-11-07 13:52:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3490/180715]	eta 10:21:09 lr 0.000000	time 0.2446 (0.2103)	total_loss 6.3007 (6.4360)	loss 2.9106 (2.9416)	multi_label_loss 3.3901 (3.4944)	grad_norm 79.1156 (inf)	mem 4960MB
+[2023-11-07 13:52:30 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3500/180715]	eta 10:21:05 lr 0.000000	time 0.2011 (0.2103)	total_loss 6.0569 (6.4356)	loss 2.7127 (2.9414)	multi_label_loss 3.3442 (3.4942)	grad_norm 78.9209 (inf)	mem 4960MB
+[2023-11-07 13:52:32 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3510/180715]	eta 10:21:10 lr 0.000000	time 0.2476 (0.2103)	total_loss 6.1068 (6.4353)	loss 2.6836 (2.9412)	multi_label_loss 3.4232 (3.4941)	grad_norm 77.7748 (inf)	mem 4960MB
+[2023-11-07 13:52:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3520/180715]	eta 10:21:10 lr 0.000000	time 0.2015 (0.2103)	total_loss 6.3425 (6.4351)	loss 2.9776 (2.9411)	multi_label_loss 3.3649 (3.4940)	grad_norm 79.5235 (inf)	mem 4960MB
+[2023-11-07 13:52:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3530/180715]	eta 10:21:11 lr 0.000000	time 0.2053 (0.2104)	total_loss 6.2503 (6.4348)	loss 2.8688 (2.9409)	multi_label_loss 3.3815 (3.4939)	grad_norm 75.3142 (inf)	mem 4960MB
+[2023-11-07 13:52:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3540/180715]	eta 10:21:14 lr 0.000000	time 0.2038 (0.2104)	total_loss 6.3770 (6.4346)	loss 3.0406 (2.9408)	multi_label_loss 3.3363 (3.4938)	grad_norm 75.6641 (inf)	mem 4960MB
+[2023-11-07 13:52:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3550/180715]	eta 10:21:14 lr 0.000000	time 0.2051 (0.2104)	total_loss 6.3021 (6.4345)	loss 2.8507 (2.9409)	multi_label_loss 3.4514 (3.4937)	grad_norm 76.9938 (inf)	mem 4960MB
+[2023-11-07 13:52:43 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3560/180715]	eta 10:21:12 lr 0.000000	time 0.2034 (0.2104)	total_loss 6.2383 (6.4343)	loss 2.8086 (2.9408)	multi_label_loss 3.4297 (3.4935)	grad_norm 78.4542 (inf)	mem 4960MB
+[2023-11-07 13:52:45 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3570/180715]	eta 10:21:11 lr 0.000000	time 0.2087 (0.2104)	total_loss 6.2683 (6.4340)	loss 2.7393 (2.9407)	multi_label_loss 3.5290 (3.4933)	grad_norm 75.8396 (inf)	mem 4960MB
+[2023-11-07 13:52:47 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3580/180715]	eta 10:21:05 lr 0.000000	time 0.2025 (0.2104)	total_loss 6.0871 (6.4337)	loss 2.6742 (2.9405)	multi_label_loss 3.4129 (3.4932)	grad_norm 74.9975 (inf)	mem 4960MB
+[2023-11-07 13:52:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3590/180715]	eta 10:21:07 lr 0.000000	time 0.2098 (0.2104)	total_loss 6.3397 (6.4336)	loss 2.8819 (2.9404)	multi_label_loss 3.4578 (3.4932)	grad_norm 74.4764 (inf)	mem 4960MB
+[2023-11-07 13:52:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3600/180715]	eta 10:21:10 lr 0.000000	time 0.2037 (0.2104)	total_loss 6.2810 (6.4333)	loss 2.8218 (2.9403)	multi_label_loss 3.4592 (3.4931)	grad_norm 79.9731 (inf)	mem 4960MB
+[2023-11-07 13:52:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3610/180715]	eta 10:21:12 lr 0.000000	time 0.2062 (0.2105)	total_loss 6.2133 (6.4330)	loss 2.8131 (2.9401)	multi_label_loss 3.4002 (3.4929)	grad_norm 75.0174 (inf)	mem 4960MB
+[2023-11-07 13:52:56 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3620/180715]	eta 10:21:09 lr 0.000000	time 0.1961 (0.2105)	total_loss 6.2540 (6.4326)	loss 2.7978 (2.9399)	multi_label_loss 3.4562 (3.4927)	grad_norm 73.4806 (inf)	mem 4960MB
+[2023-11-07 13:52:58 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3630/180715]	eta 10:21:12 lr 0.000000	time 0.2069 (0.2105)	total_loss 6.3513 (6.4322)	loss 2.8219 (2.9396)	multi_label_loss 3.5294 (3.4926)	grad_norm 73.9651 (inf)	mem 4960MB
+[2023-11-07 13:53:00 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3640/180715]	eta 10:21:11 lr 0.000000	time 0.2121 (0.2105)	total_loss 6.2747 (6.4321)	loss 2.8652 (2.9395)	multi_label_loss 3.4095 (3.4926)	grad_norm 77.2430 (inf)	mem 4960MB
+[2023-11-07 13:53:02 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3650/180715]	eta 10:21:09 lr 0.000000	time 0.2122 (0.2105)	total_loss 6.3804 (6.4319)	loss 2.9214 (2.9395)	multi_label_loss 3.4590 (3.4924)	grad_norm 77.8262 (inf)	mem 4960MB
+[2023-11-07 13:53:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3660/180715]	eta 10:21:12 lr 0.000000	time 0.2033 (0.2105)	total_loss 6.3039 (6.4317)	loss 2.8752 (2.9394)	multi_label_loss 3.4287 (3.4923)	grad_norm 74.1487 (inf)	mem 4960MB
+[2023-11-07 13:53:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3670/180715]	eta 10:21:13 lr 0.000000	time 0.2289 (0.2105)	total_loss 6.2182 (6.4315)	loss 2.7643 (2.9392)	multi_label_loss 3.4539 (3.4923)	grad_norm 74.6728 (inf)	mem 4960MB
+[2023-11-07 13:53:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3680/180715]	eta 10:21:11 lr 0.000000	time 0.1957 (0.2105)	total_loss 5.9959 (6.4312)	loss 2.6232 (2.9392)	multi_label_loss 3.3727 (3.4921)	grad_norm 73.6782 (inf)	mem 4960MB
+[2023-11-07 13:53:11 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3690/180715]	eta 10:21:16 lr 0.000000	time 0.2081 (0.2106)	total_loss 6.1236 (6.4310)	loss 2.6900 (2.9391)	multi_label_loss 3.4335 (3.4920)	grad_norm 72.2710 (inf)	mem 4960MB
+[2023-11-07 13:53:13 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3700/180715]	eta 10:21:17 lr 0.000000	time 0.2082 (0.2106)	total_loss 6.3456 (6.4309)	loss 2.9368 (2.9390)	multi_label_loss 3.4088 (3.4919)	grad_norm 73.3515 (inf)	mem 4960MB
+[2023-11-07 13:53:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3710/180715]	eta 10:21:20 lr 0.000000	time 0.2168 (0.2106)	total_loss 5.9525 (6.4306)	loss 2.6817 (2.9389)	multi_label_loss 3.2708 (3.4916)	grad_norm 75.3183 (inf)	mem 4960MB
+[2023-11-07 13:53:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3720/180715]	eta 10:21:18 lr 0.000000	time 0.1944 (0.2106)	total_loss 6.3111 (6.4303)	loss 3.0066 (2.9389)	multi_label_loss 3.3045 (3.4914)	grad_norm 81.8894 (inf)	mem 4960MB
+[2023-11-07 13:53:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3730/180715]	eta 10:21:21 lr 0.000000	time 0.2063 (0.2107)	total_loss 6.4869 (6.4300)	loss 3.0693 (2.9386)	multi_label_loss 3.4175 (3.4913)	grad_norm 75.4047 (inf)	mem 4960MB
+[2023-11-07 13:53:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3740/180715]	eta 10:21:18 lr 0.000000	time 0.2107 (0.2106)	total_loss 6.4305 (6.4298)	loss 2.8663 (2.9385)	multi_label_loss 3.5642 (3.4913)	grad_norm 72.9175 (inf)	mem 4960MB
+[2023-11-07 13:53:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3750/180715]	eta 10:21:16 lr 0.000000	time 0.2003 (0.2106)	total_loss 6.2275 (6.4296)	loss 2.8409 (2.9384)	multi_label_loss 3.3866 (3.4912)	grad_norm 72.5472 (inf)	mem 4960MB
+[2023-11-07 13:53:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3760/180715]	eta 10:21:16 lr 0.000000	time 0.2224 (0.2107)	total_loss 6.0954 (6.4292)	loss 2.7676 (2.9382)	multi_label_loss 3.3278 (3.4910)	grad_norm 77.7067 (inf)	mem 4960MB
+[2023-11-07 13:53:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3770/180715]	eta 10:21:15 lr 0.000000	time 0.2011 (0.2107)	total_loss 6.3935 (6.4289)	loss 2.9958 (2.9381)	multi_label_loss 3.3977 (3.4908)	grad_norm 75.8067 (inf)	mem 4960MB
+[2023-11-07 13:53:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3780/180715]	eta 10:21:18 lr 0.000000	time 0.2073 (0.2107)	total_loss 6.2331 (6.4286)	loss 2.8069 (2.9380)	multi_label_loss 3.4262 (3.4906)	grad_norm 76.0915 (inf)	mem 4960MB
+[2023-11-07 13:53:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3790/180715]	eta 10:21:16 lr 0.000000	time 0.2120 (0.2107)	total_loss 6.2933 (6.4282)	loss 2.8774 (2.9377)	multi_label_loss 3.4159 (3.4905)	grad_norm 83.3677 (inf)	mem 4960MB
+[2023-11-07 13:53:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3800/180715]	eta 10:21:22 lr 0.000000	time 0.2670 (0.2107)	total_loss 6.4549 (6.4280)	loss 2.9834 (2.9376)	multi_label_loss 3.4714 (3.4904)	grad_norm 77.7207 (inf)	mem 4960MB
+[2023-11-07 13:53:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3810/180715]	eta 10:21:24 lr 0.000000	time 0.2281 (0.2108)	total_loss 6.5686 (6.4278)	loss 3.0547 (2.9375)	multi_label_loss 3.5139 (3.4902)	grad_norm 80.0863 (inf)	mem 4960MB
+[2023-11-07 13:53:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3820/180715]	eta 10:21:22 lr 0.000000	time 0.2042 (0.2108)	total_loss 6.2374 (6.4276)	loss 2.8474 (2.9375)	multi_label_loss 3.3900 (3.4901)	grad_norm 78.0157 (inf)	mem 4960MB
+[2023-11-07 13:53:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3830/180715]	eta 10:21:20 lr 0.000000	time 0.2047 (0.2108)	total_loss 6.2608 (6.4274)	loss 2.8056 (2.9375)	multi_label_loss 3.4552 (3.4899)	grad_norm 83.2481 (inf)	mem 4960MB
+[2023-11-07 13:53:44 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3840/180715]	eta 10:21:21 lr 0.000000	time 0.2409 (0.2108)	total_loss 6.2602 (6.4271)	loss 2.8238 (2.9373)	multi_label_loss 3.4363 (3.4898)	grad_norm 74.0221 (inf)	mem 4960MB
+[2023-11-07 13:53:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3850/180715]	eta 10:21:24 lr 0.000000	time 0.1976 (0.2108)	total_loss 6.3911 (6.4268)	loss 2.9272 (2.9371)	multi_label_loss 3.4639 (3.4897)	grad_norm 74.5319 (inf)	mem 4960MB
+[2023-11-07 13:53:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3860/180715]	eta 10:21:23 lr 0.000000	time 0.2240 (0.2108)	total_loss 6.2733 (6.4265)	loss 2.8917 (2.9369)	multi_label_loss 3.3816 (3.4896)	grad_norm 75.6804 (inf)	mem 4960MB
+[2023-11-07 13:53:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3870/180715]	eta 10:21:23 lr 0.000000	time 0.2019 (0.2108)	total_loss 6.2060 (6.4263)	loss 2.7914 (2.9369)	multi_label_loss 3.4145 (3.4894)	grad_norm 74.6768 (inf)	mem 4960MB
+[2023-11-07 13:53:52 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3880/180715]	eta 10:21:23 lr 0.000000	time 0.2056 (0.2108)	total_loss 6.4169 (6.4263)	loss 2.9539 (2.9369)	multi_label_loss 3.4630 (3.4894)	grad_norm 76.3591 (inf)	mem 4960MB
+[2023-11-07 13:53:54 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3890/180715]	eta 10:21:24 lr 0.000000	time 0.2025 (0.2109)	total_loss 6.2915 (6.4261)	loss 2.9640 (2.9368)	multi_label_loss 3.3275 (3.4892)	grad_norm 77.3262 (inf)	mem 4960MB
+[2023-11-07 13:53:57 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3900/180715]	eta 10:21:27 lr 0.000000	time 0.2024 (0.2109)	total_loss 6.0319 (6.4258)	loss 2.6581 (2.9367)	multi_label_loss 3.3738 (3.4891)	grad_norm 71.7038 (inf)	mem 4960MB
+[2023-11-07 13:53:59 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3910/180715]	eta 10:21:26 lr 0.000000	time 0.2068 (0.2109)	total_loss 6.1722 (6.4255)	loss 2.8025 (2.9366)	multi_label_loss 3.3697 (3.4890)	grad_norm 75.3055 (inf)	mem 4960MB
+[2023-11-07 13:54:01 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3920/180715]	eta 10:21:30 lr 0.000000	time 0.2145 (0.2109)	total_loss 6.3730 (6.4252)	loss 2.9407 (2.9363)	multi_label_loss 3.4323 (3.4889)	grad_norm 75.0851 (inf)	mem 4960MB
+[2023-11-07 13:54:03 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3930/180715]	eta 10:21:28 lr 0.000000	time 0.2425 (0.2109)	total_loss 6.3108 (6.4250)	loss 3.0058 (2.9363)	multi_label_loss 3.3049 (3.4887)	grad_norm 82.4797 (inf)	mem 4960MB
+[2023-11-07 13:54:05 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3940/180715]	eta 10:21:30 lr 0.000000	time 0.2084 (0.2109)	total_loss 6.3560 (6.4250)	loss 2.8993 (2.9364)	multi_label_loss 3.4566 (3.4886)	grad_norm 75.1957 (inf)	mem 4960MB
+[2023-11-07 13:54:07 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3950/180715]	eta 10:21:25 lr 0.000000	time 0.2049 (0.2109)	total_loss 6.4745 (6.4247)	loss 3.0492 (2.9363)	multi_label_loss 3.4252 (3.4885)	grad_norm 74.2172 (inf)	mem 4960MB
+[2023-11-07 13:54:09 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3960/180715]	eta 10:21:25 lr 0.000000	time 0.2377 (0.2109)	total_loss 6.3170 (6.4245)	loss 2.7796 (2.9360)	multi_label_loss 3.5375 (3.4884)	grad_norm 75.7139 (inf)	mem 4960MB
+[2023-11-07 13:54:12 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3970/180715]	eta 10:21:24 lr 0.000000	time 0.2101 (0.2110)	total_loss 6.2499 (6.4243)	loss 2.8421 (2.9359)	multi_label_loss 3.4078 (3.4884)	grad_norm 73.3713 (inf)	mem 4960MB
+[2023-11-07 13:54:14 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3980/180715]	eta 10:21:24 lr 0.000000	time 0.2090 (0.2110)	total_loss 6.0793 (6.4240)	loss 2.7248 (2.9357)	multi_label_loss 3.3545 (3.4882)	grad_norm 75.6633 (inf)	mem 4960MB
+[2023-11-07 13:54:16 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][3990/180715]	eta 10:21:24 lr 0.000000	time 0.1993 (0.2110)	total_loss 6.6492 (6.4240)	loss 3.1768 (2.9358)	multi_label_loss 3.4725 (3.4882)	grad_norm 76.3529 (inf)	mem 4960MB
+[2023-11-07 13:54:18 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4000/180715]	eta 10:21:19 lr 0.000000	time 0.2147 (0.2110)	total_loss 6.1981 (6.4235)	loss 2.8167 (2.9355)	multi_label_loss 3.3814 (3.4880)	grad_norm 73.9039 (inf)	mem 4960MB
+[2023-11-07 13:54:20 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4010/180715]	eta 10:21:19 lr 0.000000	time 0.2391 (0.2110)	total_loss 6.2908 (6.4233)	loss 2.8505 (2.9354)	multi_label_loss 3.4403 (3.4879)	grad_norm 77.9680 (inf)	mem 4960MB
+[2023-11-07 13:54:22 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4020/180715]	eta 10:21:20 lr 0.000000	time 0.2053 (0.2110)	total_loss 6.4043 (6.4230)	loss 2.9705 (2.9352)	multi_label_loss 3.4339 (3.4877)	grad_norm 79.2179 (inf)	mem 4960MB
+[2023-11-07 13:54:24 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4030/180715]	eta 10:21:16 lr 0.000000	time 0.2035 (0.2110)	total_loss 6.6021 (6.4228)	loss 3.0671 (2.9352)	multi_label_loss 3.5351 (3.4877)	grad_norm 82.0761 (inf)	mem 4960MB
+[2023-11-07 13:54:26 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4040/180715]	eta 10:21:10 lr 0.000000	time 0.2026 (0.2110)	total_loss 6.4576 (6.4226)	loss 2.9218 (2.9350)	multi_label_loss 3.5359 (3.4876)	grad_norm 74.8800 (inf)	mem 4960MB
+[2023-11-07 13:54:28 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4050/180715]	eta 10:21:06 lr 0.000000	time 0.2056 (0.2109)	total_loss 6.4323 (6.4224)	loss 2.9637 (2.9350)	multi_label_loss 3.4686 (3.4874)	grad_norm 70.6982 (inf)	mem 4960MB
+[2023-11-07 13:54:31 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4060/180715]	eta 10:21:00 lr 0.000000	time 0.1983 (0.2109)	total_loss 6.3746 (6.4222)	loss 2.9435 (2.9349)	multi_label_loss 3.4311 (3.4873)	grad_norm 84.7317 (inf)	mem 4960MB
+[2023-11-07 13:54:33 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4070/180715]	eta 10:20:59 lr 0.000000	time 0.1988 (0.2109)	total_loss 6.5491 (6.4222)	loss 3.1059 (2.9350)	multi_label_loss 3.4431 (3.4873)	grad_norm 77.7361 (inf)	mem 4960MB
+[2023-11-07 13:54:35 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4080/180715]	eta 10:20:58 lr 0.000000	time 0.2358 (0.2109)	total_loss 6.5956 (6.4223)	loss 3.1478 (2.9350)	multi_label_loss 3.4477 (3.4872)	grad_norm 72.2034 (inf)	mem 4960MB
+[2023-11-07 13:54:37 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4090/180715]	eta 10:21:00 lr 0.000000	time 0.2008 (0.2110)	total_loss 6.1446 (6.4219)	loss 2.8721 (2.9348)	multi_label_loss 3.2725 (3.4870)	grad_norm 73.2363 (inf)	mem 4960MB
+[2023-11-07 13:54:39 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4100/180715]	eta 10:20:59 lr 0.000000	time 0.2472 (0.2110)	total_loss 6.3142 (6.4218)	loss 2.9185 (2.9348)	multi_label_loss 3.3957 (3.4870)	grad_norm 77.8059 (inf)	mem 4960MB
+[2023-11-07 13:54:41 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4110/180715]	eta 10:21:01 lr 0.000000	time 0.2098 (0.2110)	total_loss 6.4506 (6.4216)	loss 2.9413 (2.9347)	multi_label_loss 3.5093 (3.4869)	grad_norm 83.5752 (inf)	mem 4960MB
+[2023-11-07 13:54:43 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4120/180715]	eta 10:20:58 lr 0.000000	time 0.2009 (0.2110)	total_loss 6.3386 (6.4214)	loss 2.8510 (2.9346)	multi_label_loss 3.4876 (3.4868)	grad_norm 78.6059 (inf)	mem 4960MB
+[2023-11-07 13:54:46 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4130/180715]	eta 10:20:58 lr 0.000000	time 0.2375 (0.2110)	total_loss 6.3970 (6.4212)	loss 2.9205 (2.9345)	multi_label_loss 3.4766 (3.4866)	grad_norm 73.2001 (inf)	mem 4960MB
+[2023-11-07 13:54:48 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4140/180715]	eta 10:20:57 lr 0.000000	time 0.2074 (0.2110)	total_loss 6.3343 (6.4209)	loss 2.8593 (2.9344)	multi_label_loss 3.4750 (3.4865)	grad_norm 72.5534 (inf)	mem 4960MB
+[2023-11-07 13:54:50 group_vit_gcc_yfcc_30e_bs16x1] (main_group_vit.py 286): INFO Train: [0/30][4150/180715]	eta 10:20:58 lr 0.000000	time 0.2041 (0.2110)	total_loss 6.4525 (6.4207)	loss 3.0187 (2.9342)	multi_label_loss 3.4339 (3.4864)	grad_norm 77.7460 (inf)	mem 4960MB
