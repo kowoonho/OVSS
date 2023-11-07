@@ -73,7 +73,7 @@ def parse_args():
         choices=['O0', 'O1', 'O2'],
         help='mixed precision opt level, if O0, no amp is used')
     parser.add_argument(
-        '--output', type=str, help='root of output folder, '
+        '--output', default="/workspace/Dataset/output", type=str, help='root of output folder, '
         'the full path is <output>/<model_name>/<tag>')
     parser.add_argument('--tag', type=str, help='tag of experiment')
     parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
@@ -112,9 +112,10 @@ def train(cfg):
     logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
     
     model = build_model(cfg.model)
-
+    print(model)
+    exit()
     model.cuda()
-    logger.info(str(model))
+    # logger.info(str(model))
 
     optimizer = build_optimizer(cfg.train, model)
     if cfg.train.amp_opt_level != 'O0':
