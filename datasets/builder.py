@@ -78,6 +78,7 @@ def build_loader(config):
         num_workers=config.num_workers,
         pin_memory=config.pin_memory,
         persistent_workers=config.num_workers > 0,
+        # persistent_workers=False,
         worker_init_fn=init_fn)
 
     train_len = len(dataset_train)

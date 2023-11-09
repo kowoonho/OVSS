@@ -560,7 +560,7 @@ class GroupingLayer(nn.Module):
         attn_dict = None
         if self.downsample is not None:
             x, attn_dict = self.downsample(x, group_token, return_attn=return_attn)
-            
+
         return x, group_token, attn_dict
 
 
@@ -709,6 +709,7 @@ class GroupViT(nn.Module):
 
         # stochastic depth
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
+
         num_input_token = num_patches
         num_output_token = num_input_token
         # build layers
@@ -864,7 +865,7 @@ class GroupViT(nn.Module):
     def forward(self, x, *, return_feat=False, return_attn=False, as_dict=False):
         x, group_token, attn_dicts = self.forward_features(x, return_attn=return_attn)
         x_feat = x if return_feat else None
-        
+
         outs = Result(as_dict=as_dict)
 
         outs.append(self.forward_image_head(x), name='x')

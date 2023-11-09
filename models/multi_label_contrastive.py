@@ -126,7 +126,7 @@ class MultiLabelContrastive(nn.Module):
         batch_size = image_x.shape[0]
         # get label globally
         labels = torch.arange(batch_size, dtype=torch.long, device=image_x.device) + batch_size * dist.get_rank()
-
+        
         # [B, C]
         image_x = F.normalize(image_x, dim=-1)
         text_x = F.normalize(text_x, dim=-1)
@@ -156,6 +156,7 @@ class MultiLabelContrastive(nn.Module):
         image_feat = F.normalize(image_feat, dim=-1)
         # [B, L2, C]
         text_feat = F.normalize(text_feat, dim=-1)
+        
 
         # [B, L1, L2]
         dist_per_img = image_feat @ rearrange(text_feat, 'b l c -> b c l')
@@ -177,6 +178,7 @@ class MultiLabelContrastive(nn.Module):
 
         image_x = rearrange(image_feat, 'b l c -> (b l) c')
         text_x = rearrange(text_feat, 'b l c -> (b l) c')
+        
 
         logits_per_img = image_x @ dist_collect(text_x).t()
         logits_per_text = text_x @ dist_collect(image_x).t()
@@ -209,6 +211,7 @@ class MultiLabelContrastive(nn.Module):
     def encode_image(self, image, *, return_feat=False, as_dict=False):
         outs = Result(as_dict)
         img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
+        
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         if return_feat:
             outs.append(self.img_projector(img_outs['feat']), 'image_feat')
@@ -227,6 +230,7 @@ class MultiLabelContrastive(nn.Module):
         # [B, C]
         x = self.text_encoder(text)
         text_x = self.text_projector(x)
+        
         outs.append(text_x, 'text_x')
         if squeeze_dim:
             text_x = rearrange(text_x, '(b n) c -> b n c', n=num_text)
@@ -237,10 +241,11 @@ class MultiLabelContrastive(nn.Module):
         return outs.as_return()
 
     def forward_train(self, image, text):
+        print(text)
         image_outs = self.encode_image(image, as_dict=True)
         # [B, C]
         image_x = image_outs['image_x']
-
+        
         text_outs = self.encode_text(text, as_dict=True)
         # [B, C]
         text_x = text_outs['text_x']
@@ -248,12 +253,13 @@ class MultiLabelContrastive(nn.Module):
         losses = self.loss(image_x, text_x)
 
         losses_dict = dict(loss=losses)
+        
         if self.with_multi_label:
             image_multi_label_x = image_x.unsqueeze(1)
             text_multi_label_x = text_outs['text_multi_label_x']
             losses_dict['multi_label_loss'] = self.multi_label_loss(image_multi_label_x,
                                                                     text_multi_label_x) * self.multi_label_loss_weight
-
+            
         return losses_dict
 
     def forward_test(self, image, text):

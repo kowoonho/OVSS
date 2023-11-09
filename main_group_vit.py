@@ -112,8 +112,6 @@ def train(cfg):
     logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
     
     model = build_model(cfg.model)
-    print(model)
-    exit()
     model.cuda()
     # logger.info(str(model))
 
@@ -228,6 +226,11 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
     for idx, samples in enumerate(data_loader):
 
         batch_size = config.data.batch_size
+        # images = samples['image']._data[0]
+        # texts = samples['text']._data[0]
+        # print(images.shape)
+        # print(texts.shape)
+        # exit()
 
         losses = model(**samples)
 
@@ -462,7 +465,7 @@ def main():
     logger.info(f'Git hash: {get_git_hash(digits=7)}')
 
     # print config
-    logger.info(OmegaConf.to_yaml(cfg))
+    # logger.info(OmegaConf.to_yaml(cfg))
 
     train(cfg)
     dist.barrier()
