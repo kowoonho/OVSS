@@ -71,7 +71,7 @@ def get_config(args):
     cfg.model_name = cfg.model_name + f'_bs{cfg.data.batch_size}x{world_size}'
 
     if hasattr(args, 'output') and args.output:
-        cfg.output = osp.join(args.output, cfg.model_name + '_' + timestamp)
+        cfg.output = osp.join(args.output, cfg.model_name)
     else:
         cfg.output = osp.join('output', cfg.model_name)
 

@@ -129,6 +129,7 @@ class GroupViTSegInference(EncoderDecoder):
         self.register_buffer('text_embedding', text_embedding)
         self.with_bg = with_bg
         self.bg_thresh = test_cfg['bg_thresh']
+        self.fg_thresh = 0.75
         if self.with_bg:
             self.num_classes = len(text_embedding) + 1
         else:
@@ -197,6 +198,7 @@ class GroupViTSegInference(EncoderDecoder):
         assert img.shape[0] == 1, 'batch size must be 1'
         # [B, C, H, W], get the last one only
         attn_map = self.get_attn_maps(img, rescale=True)[-1]
+        
         # [H, W, G], select batch idx 0
         attn_map = attn_map[0]
 
@@ -204,13 +206,20 @@ class GroupViTSegInference(EncoderDecoder):
         # [B, L, C] -> [L, C]
         grouped_img_tokens = img_outs['image_feat'].squeeze(0)
         img_avg_feat = img_outs['image_x']
+        
+        fg_token = img_outs['image_fg']
+        bg_token = img_outs['image_bg']
+        
+        fgbg_tokens = torch.cat([fg_token, bg_token], dim=0)
+        
         # [G, C]
         grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
         img_avg_feat = F.normalize(img_avg_feat, dim=-1)
-
+        
+        fgbg_tokens = F.normalize(fgbg_tokens, dim=-1)
+           
         # [H, W, G]
         onehot_attn_map = F.one_hot(attn_map.argmax(dim=-1), num_classes=attn_map.shape[-1]).to(dtype=attn_map.dtype)
-
         num_fg_classes = self.text_embedding.shape[0]
         class_offset = 1 if self.with_bg else 0
         text_tokens = self.text_embedding
@@ -220,7 +229,15 @@ class GroupViTSegInference(EncoderDecoder):
         # [G, N]
         group_affinity_mat = (grouped_img_tokens @ text_tokens.T) * logit_scale
         pre_group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
-
+        
+        fgbg_affinity_mat = (grouped_img_tokens @ fgbg_tokens.T) * logit_scale
+        
+        fg_affinity_mat = fgbg_affinity_mat[:,0]
+        bg_affinity_mat = fgbg_affinity_mat[:,1]
+        
+        fg_indices = (fg_affinity_mat > self.fg_thresh).unsqueeze(1).float()
+        bg_indices = (bg_affinity_mat > self.bg_thresh).unsqueeze(1).float()
+        
         avg_affinity_mat = (img_avg_feat @ text_tokens.T) * logit_scale
         avg_affinity_mat = F.softmax(avg_affinity_mat, dim=-1)
         affinity_mask = torch.zeros_like(avg_affinity_mat)
@@ -228,19 +245,22 @@ class GroupViTSegInference(EncoderDecoder):
         affinity_mask.scatter_add_(
             dim=-1, index=avg_affinity_topk.indices, src=torch.ones_like(avg_affinity_topk.values))
         group_affinity_mat.masked_fill_(~affinity_mask.bool(), float('-inf'))
-
+        group_affinity_mat.masked_fill_(bg_indices.bool(), float('-inf'))
+        
         group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
+        
 
         # TODO: check if necessary
         group_affinity_mat *= pre_group_affinity_mat
 
+        
         pred_logits = torch.zeros(num_classes, *attn_map.shape[:2], device=img.device, dtype=img.dtype)
 
         pred_logits[class_offset:] = rearrange(onehot_attn_map @ group_affinity_mat, 'h w c -> c h w')
         if self.with_bg:
             bg_thresh = min(self.bg_thresh, group_affinity_mat.max().item())
             pred_logits[0, (onehot_attn_map @ group_affinity_mat).max(dim=-1).values < bg_thresh] = 1
-
+            
         return pred_logits.unsqueeze(0)
 
     def blend_result(self, img, result, palette=None, out_file=None, opacity=0.5, with_bg=False):
