@@ -540,6 +540,7 @@ class GroupingLayer(nn.Module):
             prev_group_token (torch.Tensor): group tokens, [B, S_1, C]
             return_attn (bool): whether to return attention maps
         """
+        
         if self.with_group_token:
             group_token = self.group_token.expand(x.size(0), -1, -1)
             if self.group_projector is not None:
@@ -560,7 +561,7 @@ class GroupingLayer(nn.Module):
         attn_dict = None
         if self.downsample is not None:
             x, attn_dict = self.downsample(x, group_token, return_attn=return_attn)
-
+            
         return x, group_token, attn_dict
 
 
@@ -601,6 +602,115 @@ class PatchEmbed(nn.Module):
         if self.norm is not None:
             x = self.norm(x)
         return x, hw_shape
+
+class Group_bgfg(nn.Module):
+    def __init__(self,
+                 dim,
+                 depth,
+                 num_group_tokens,
+                 num_heads = 6,
+                 mlp_ratio = (0.5, 4.0),
+                 qkv_bias=True,
+                 norm_layer=nn.LayerNorm,
+                 hard=True,
+                 gumbel=True,
+                 sum_assign=False,
+                 assign_eps=1.,
+                 gumbel_tau=1.,
+                 qk_scale = None,
+                 drop=0.,
+                 attn_drop=0.,
+                 drop_path=0.,):
+        super().__init__()
+        self.dim = dim
+        self.bg_token = nn.Parameter(torch.zeros(1, 1, dim))
+        self.fg_token = nn.Parameter(torch.zeros(1, 1, dim))
+        num_output_group = num_group_tokens
+        out_dim = dim
+        
+        tokens_dim, channels_dim = [int(x * dim) for x in to_2tuple(mlp_ratio)]
+        
+        self.norm_layer = norm_layer(dim)
+
+        self.mlp_inter = Mlp(num_group_tokens, tokens_dim, num_output_group)
+        self.mlp_channels = Mlp(dim, channels_dim, out_dim)
+        
+        self.pre_assign_attn = CrossAttnBlock(
+            dim=dim, num_heads=num_heads, mlp_ratio=4, qkv_bias=qkv_bias, norm_layer=norm_layer, post_norm=True)
+        
+        self.assign = AssignAttention(
+            dim=dim,
+            num_heads=1,
+            qkv_bias=True,
+            hard=hard,
+            gumbel=gumbel,
+            gumbel_tau=gumbel_tau,
+            sum_assign=sum_assign,
+            assign_eps=assign_eps)
+        
+        self.depth = depth
+        blocks = []
+        for i in range(depth):
+            blocks.append(
+                AttnBlock(
+                    dim=dim,
+                    num_heads=num_heads,
+                    mlp_ratio=mlp_ratio,
+                    qkv_bias=qkv_bias,
+                    qk_scale=qk_scale,
+                    drop=drop,
+                    attn_drop=attn_drop,
+                    drop_path=drop_path[i],
+                    norm_layer=norm_layer))
+        self.blocks = nn.ModuleList(blocks)
+        
+        
+    def concat_x(self, x, y):
+        return torch.cat([x, y], dim = 1)
+    
+    def split_x(self, x):
+        return x[:, :-2], x[:, -2:]
+    
+    def project_token(self, tokens):
+        
+        projected_tokens = self.mlp_inter(tokens.transpose(1, 2)).transpose(1,2)
+        projected_tokens = self.norm_layer(projected_tokens)
+        
+        return projected_tokens
+    
+    def grouping_block(self, x, fgbg_tokens):
+        fgbg_tokens = self.norm_layer(fgbg_tokens)
+        x = self.norm_layer(x)
+        
+        projected_fgbg_tokens = self.project_token(fgbg_tokens)
+        projected_fgbg_tokens = self.pre_assign_attn(projected_fgbg_tokens, x)
+        
+        new_x, attn_dict = self.assign(projected_fgbg_tokens, x)
+        
+        new_x += projected_fgbg_tokens
+        
+        new_x = self.mlp_channels(self.norm_layer(new_x))
+        
+        return new_x, attn_dict
+    
+    def forward(self, x, bg_token, fg_token, return_attn=False):
+        bg_token = self.bg_token.expand(x.size(0), -1, -1)
+        fg_token = self.fg_token.expand(x.size(0), -1, -1)
+
+        B, L, C = x.shape
+        
+        fgbg_tokens = self.concat_x(fg_token, bg_token)
+        cat_x = self.concat_x(x, fg_token, bg_token)
+        
+        for blk_idx, blk in enumerate(self.blocks):
+            cat_x = blk_idx
+            
+        x, fgbg_tokens = self.split_x(cat_x)
+        
+        x, attn_dict = self.grouping_block(x, fgbg_tokens)
+        
+        return x, fgbg_tokens, attn_dict
+    
 
 
 @MODELS.register_module()
@@ -709,7 +819,6 @@ class GroupViT(nn.Module):
 
         # stochastic depth
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
-
         num_input_token = num_patches
         num_output_token = num_input_token
         # build layers
@@ -835,11 +944,12 @@ class GroupViT(nn.Module):
 
         x = x + self.get_pos_embed(B, *hw_shape)
         x = self.pos_drop(x)
-
+        
         group_token = None
         attn_dict_list = []
         for layer in self.layers:
             x, group_token, attn_dict = layer(x, group_token, return_attn=return_attn)
+
             attn_dict_list.append(attn_dict)
 
         x = self.norm(x)
@@ -865,7 +975,7 @@ class GroupViT(nn.Module):
     def forward(self, x, *, return_feat=False, return_attn=False, as_dict=False):
         x, group_token, attn_dicts = self.forward_features(x, return_attn=return_attn)
         x_feat = x if return_feat else None
-
+        
         outs = Result(as_dict=as_dict)
 
         outs.append(self.forward_image_head(x), name='x')
@@ -877,3 +987,5 @@ class GroupViT(nn.Module):
             outs.append(attn_dicts, name='attn_dicts')
 
         return outs.as_return()
+    
+

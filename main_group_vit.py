@@ -151,6 +151,7 @@ def train(cfg):
         if cfg.evaluate.eval_only:
             return
 
+
     logger.info('Start training')
     start_time = time.time()
     for epoch in range(cfg.train.start_epoch, cfg.train.epochs):
@@ -226,16 +227,11 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
     for idx, samples in enumerate(data_loader):
 
         batch_size = config.data.batch_size
-        # images = samples['image']._data[0]
-        # texts = samples['text']._data[0]
-        # print(images.shape)
-        # print(texts.shape)
-        # exit()
 
         losses = model(**samples)
-
+        
         loss, log_vars = parse_losses(losses)
-
+        
         if config.train.accumulation_steps > 1:
             loss = loss / config.train.accumulation_steps
             if config.train.amp_opt_level != 'O0':
@@ -395,7 +391,7 @@ def validate_seg(config, data_loader, model):
 
     
     ret_metric = evalutate(results)
-    print(ret_metric)
+    
     
     if dist.get_rank() == 0:
         metric = [data_loader.dataset.evaluate(results, metric='mIoU')]

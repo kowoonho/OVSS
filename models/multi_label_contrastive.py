@@ -14,6 +14,8 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
+import itertools
+
 from einops import rearrange, repeat
 from timm.loss import SoftTargetCrossEntropy
 
@@ -87,7 +89,9 @@ class MultiLabelContrastive(nn.Module):
                  proj_num_layers=2,
                  multi_label=0,
                  share_temperature=False,
-                 multi_label_loss_weight=1.0):
+                 multi_label_loss_weight=1.0,
+                 with_fgbg=True,
+                 with_multi_label_loss=False):
         super().__init__()
 
         self.img_encoder = MODELS.build(img_encoder)
@@ -100,6 +104,9 @@ class MultiLabelContrastive(nn.Module):
 
         self.proj_num_layers = proj_num_layers
         self.multi_label = multi_label
+        self.with_fgbg = with_fgbg
+        self.with_multi_label_loss = with_multi_label_loss
+        
         if proj_num_layers > 0:
             self.img_projector = ProjectMLP(
                 in_dim=self.img_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
@@ -120,7 +127,7 @@ class MultiLabelContrastive(nn.Module):
     @property
     def with_multi_label(self):
         return self.multi_label > 0
-
+    
     def loss(self, image_x, text_x):
 
         batch_size = image_x.shape[0]
@@ -142,7 +149,7 @@ class MultiLabelContrastive(nn.Module):
 
         return loss
 
-    def multi_label_loss(self, image_feat, text_feat):
+    def multi_label_loss(self, image_feat, text_feat, bg = False):
         """
 
         Args:
@@ -171,15 +178,24 @@ class MultiLabelContrastive(nn.Module):
         batch = image_feat.shape[0]
         img_len = image_feat.shape[1]
         text_len = text_feat.shape[1]
-        # [B, L1, L2]
-        pos_labels_batch_img = rearrange(torch.ones_like(dist_per_text) / dist_per_text.size(1), 'b l2 l1 -> b l1 l2')
-        # [B, L2, L1]
-        pos_labels_batch_text = rearrange(torch.ones_like(dist_per_img) / dist_per_img.size(1), 'b l1 l2 -> b l2 l1')
-
+        
+        
+        if bg:
+            # [B, L1, L2]
+            pos_labels_batch_img = rearrange(torch.zeros_like(dist_per_text), 'b l2 l1 -> b l1 l2')
+            pos_labels_batch_img[:,:,0] = 1.
+            # [B, L2, L1]
+            pos_labels_batch_text = rearrange(torch.zeros_like(dist_per_img), 'b l1 l2 -> b l2 l1')
+            pos_labels_batch_text[:,0,:] = 1.
+        else:
+            # [B, L1, L2]
+            pos_labels_batch_img = rearrange(torch.ones_like(dist_per_text) / dist_per_text.size(1), 'b l2 l1 -> b l1 l2')
+            # [B, L2, L1]
+            pos_labels_batch_text = rearrange(torch.ones_like(dist_per_img) / dist_per_img.size(1), 'b l1 l2 -> b l2 l1')
+        
         image_x = rearrange(image_feat, 'b l c -> (b l) c')
         text_x = rearrange(text_feat, 'b l c -> (b l) c')
         
-
         logits_per_img = image_x @ dist_collect(text_x).t()
         logits_per_text = text_x @ dist_collect(image_x).t()
 
@@ -200,19 +216,38 @@ class MultiLabelContrastive(nn.Module):
             torch.eye(batch, dtype=text_x.dtype, device=image_x.device), 'b2 b1 -> b2 1 b1 1 1')
         # [BxL2, WxBxL1]
         labels_per_text = rearrange(labels_per_text, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
-
         loss_img = self.soft_cross_entropy(logits_per_img * logit_scale, labels_per_img)
         loss_text = self.soft_cross_entropy(logits_per_text * logit_scale, labels_per_text)
-
+    
         loss = 0.5 * (loss_img + loss_text)
-
+        
         return loss
-
+    
+    def fg_loss(self, fg_feat, text_feat):
+        fg_loss = self.multi_label_loss(fg_feat, text_feat)
+        
+        return fg_loss
+    
+    def bg_loss(self, bg_feat, text_feat):
+        bg_loss = self.multi_label_loss(bg_feat, text_feat, bg=True)
+        
+        return bg_loss
+    
+    def fgbg_loss(self, fg_feat, bg_feat, text_feat):
+        
+        fg_loss = self.fg_loss(fg_feat, text_feat)
+        bg_loss = self.bg_loss(bg_feat, text_feat)
+        
+        return fg_loss, bg_loss
+    
     def encode_image(self, image, *, return_feat=False, as_dict=False):
         outs = Result(as_dict)
         img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
+        outs.append(self.img_projector(img_outs['fg']), 'image_fg')
+        outs.append(self.img_projector(img_outs['bg']), 'image_bg')
+        
         if return_feat:
             outs.append(self.img_projector(img_outs['feat']), 'image_feat')
         return outs.as_return()
@@ -241,7 +276,6 @@ class MultiLabelContrastive(nn.Module):
         return outs.as_return()
 
     def forward_train(self, image, text):
-        print(text)
         image_outs = self.encode_image(image, as_dict=True)
         # [B, C]
         image_x = image_outs['image_x']
@@ -254,11 +288,18 @@ class MultiLabelContrastive(nn.Module):
 
         losses_dict = dict(loss=losses)
         
-        if self.with_multi_label:
+        if self.with_multi_label_loss:
             image_multi_label_x = image_x.unsqueeze(1)
             text_multi_label_x = text_outs['text_multi_label_x']
             losses_dict['multi_label_loss'] = self.multi_label_loss(image_multi_label_x,
                                                                     text_multi_label_x) * self.multi_label_loss_weight
+        
+        if self.with_fgbg:
+            text_multi_label_x = text_outs['text_multi_label_x']
+            text_total_x = torch.cat([text_x.unsqueeze(1), text_multi_label_x], dim=1) # (original_t, multi_lable_t)
+            image_fg = image_outs['image_fg'].unsqueeze(1)
+            image_bg = image_outs['image_bg'].unsqueeze(1)
+            losses_dict['fg_loss'], losses_dict['bg_loss'] = self.fgbg_loss(image_fg, image_bg, text_total_x)
             
         return losses_dict
 
@@ -296,10 +337,14 @@ class MultiLabelContrastive(nn.Module):
     @torch.no_grad()
     def zero_shot_pred(self, image, text):
         # [B, C]
-        image_features = self.encode_image(image)
+        image_outs = self.encode_image(image)
+        image_features = image_outs[0]
+        
+        # [B, C]
         image_features = F.normalize(image_features, dim=-1)
 
         # cosine similarity as logits
         logits_per_image = image_features @ text.t()
 
         return logits_per_image
+

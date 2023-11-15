@@ -53,7 +53,7 @@ def parse_args():
         help='resume from checkpoint',
     )
     parser.add_argument(
-        '--output', type=str, help='root of output folder, '
+        '--output', type=str, default="/workspace/Dataset/output", help='root of output folder, '
         'the full path is <output>/<model_name>/<tag>')
     parser.add_argument('--tag', help='tag of experiment')
     parser.add_argument(

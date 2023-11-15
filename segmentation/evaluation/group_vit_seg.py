@@ -150,7 +150,6 @@ class GroupViTSegInference(EncoderDecoder):
             attn_maps: list[Tensor], attention map of shape [B, H, W, groups]
         """
         results = self.model.img_encoder(img, return_attn=True, as_dict=True)
-
         attn_maps = []
         with torch.no_grad():
             prev_attn_masks = None
@@ -196,7 +195,6 @@ class GroupViTSegInference(EncoderDecoder):
         map of the same size as input."""
 
         assert img.shape[0] == 1, 'batch size must be 1'
-
         # [B, C, H, W], get the last one only
         attn_map = self.get_attn_maps(img, rescale=True)[-1]
         # [H, W, G], select batch idx 0

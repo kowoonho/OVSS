@@ -13,6 +13,7 @@ import os.path as osp
 
 from omegaconf import OmegaConf
 
+from datetime import datetime
 
 def load_config(cfg_file):
     cfg = OmegaConf.load(cfg_file)
@@ -24,10 +25,27 @@ def load_config(cfg_file):
         cfg = OmegaConf.merge(base_cfg, cfg)
     return cfg
 
+def make_timestamp():
+    date_time = datetime.now()
+    
+    date_time = str(date_time)
+    
+    date = date_time.split(' ')[0]
+    time = date_time.split(' ')[1].split('.')[0]
+    
+    date = date.replace('-','_')
+    time = time.replace(':','_')
+    
+    return date + '_' + time
+    
+    
 
 def get_config(args):
     cfg = load_config(args.cfg)
     OmegaConf.set_struct(cfg, True)
+    
+    timestamp = make_timestamp()
+    
 
     if args.opts is not None:
         cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(args.opts))
@@ -53,7 +71,7 @@ def get_config(args):
     cfg.model_name = cfg.model_name + f'_bs{cfg.data.batch_size}x{world_size}'
 
     if hasattr(args, 'output') and args.output:
-        cfg.output = osp.join(args.output, cfg.model_name)
+        cfg.output = osp.join(args.output, cfg.model_name + '_' + timestamp)
     else:
         cfg.output = osp.join('output', cfg.model_name)
 
