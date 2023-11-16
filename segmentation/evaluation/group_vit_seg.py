@@ -245,7 +245,7 @@ class GroupViTSegInference(EncoderDecoder):
         affinity_mask.scatter_add_(
             dim=-1, index=avg_affinity_topk.indices, src=torch.ones_like(avg_affinity_topk.values))
         group_affinity_mat.masked_fill_(~affinity_mask.bool(), float('-inf'))
-        group_affinity_mat.masked_fill_(bg_indices.bool(), float('-inf'))
+        # group_affinity_mat.masked_fill_(bg_indices.bool(), float('-inf'))
         
         group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
         

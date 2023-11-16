@@ -151,8 +151,6 @@ def train(cfg):
         if cfg.evaluate.eval_only:
             return
 
-    miou = validate_seg(cfg, data_loader_seg, model)
-    exit()
     
 
     logger.info('Start training')
