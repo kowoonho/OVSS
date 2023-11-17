@@ -631,6 +631,10 @@ class Group_fgbg(nn.Module):
         self.dim = dim
         self.bg_token = nn.Parameter(torch.zeros(1, 1, dim))
         self.fg_token = nn.Parameter(torch.zeros(1, 1, dim))
+        
+        trunc_normal_(self.fg_token, std=.02)
+        trunc_normal_(self.bg_token, std=.02)
+        
         num_output_group = num_group_tokens
         out_dim = dim
         

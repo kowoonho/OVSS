@@ -161,7 +161,7 @@ class MultiLabelContrastive(nn.Module):
         """
         # [B, L1, C], L1 = 1
         image_feat = F.normalize(image_feat, dim=-1)
-        # [B, L2, C]
+        # [B, L2, C], L2 = 3
         text_feat = F.normalize(text_feat, dim=-1)
         
 
@@ -180,24 +180,18 @@ class MultiLabelContrastive(nn.Module):
         text_len = text_feat.shape[1]
         
         
-        if bg:
-            # [B, L1, L2]
-            pos_labels_batch_img = rearrange(torch.zeros_like(dist_per_text), 'b l2 l1 -> b l1 l2')
-            pos_labels_batch_img[:,:,0] = 1.
-            # [B, L2, L1]
-            pos_labels_batch_text = rearrange(torch.zeros_like(dist_per_img), 'b l1 l2 -> b l2 l1')
-            pos_labels_batch_text[:,0,:] = 1.
-        else:
-            # [B, L1, L2]
-            pos_labels_batch_img = rearrange(torch.ones_like(dist_per_text) / dist_per_text.size(1), 'b l2 l1 -> b l1 l2')
-            # [B, L2, L1]
-            pos_labels_batch_text = rearrange(torch.ones_like(dist_per_img) / dist_per_img.size(1), 'b l1 l2 -> b l2 l1')
+        # [B, L1, L2]
+        pos_labels_batch_img = rearrange(torch.ones_like(dist_per_text) / dist_per_text.size(1), 'b l2 l1 -> b l1 l2')
+        # [B, L2, L1]
+        pos_labels_batch_text = rearrange(torch.ones_like(dist_per_img) / dist_per_img.size(1), 'b l1 l2 -> b l2 l1')
+
         
         image_x = rearrange(image_feat, 'b l c -> (b l) c')
         text_x = rearrange(text_feat, 'b l c -> (b l) c')
         
         logits_per_img = image_x @ dist_collect(text_x).t()
         logits_per_text = text_x @ dist_collect(image_x).t()
+
 
         # get label globally
         # [B, L1, B, L2, W]
@@ -218,27 +212,90 @@ class MultiLabelContrastive(nn.Module):
         labels_per_text = rearrange(labels_per_text, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
         loss_img = self.soft_cross_entropy(logits_per_img * logit_scale, labels_per_img)
         loss_text = self.soft_cross_entropy(logits_per_text * logit_scale, labels_per_text)
-    
+        if bg == True:
+            print(logits_per_img * logit_scale)
+            print(labels_per_img)
         loss = 0.5 * (loss_img + loss_text)
         
         return loss
     
-    def fg_loss(self, fg_feat, text_feat):
-        fg_loss = self.multi_label_loss(fg_feat, text_feat)
-        
-        return fg_loss
-    
-    def bg_loss(self, bg_feat, text_feat):
-        bg_loss = self.multi_label_loss(bg_feat, text_feat, bg=True)
-        
-        return bg_loss
-    
     def fgbg_loss(self, fg_feat, bg_feat, text_feat):
         
-        fg_loss = self.fg_loss(fg_feat, text_feat)
-        bg_loss = self.bg_loss(bg_feat, text_feat)
+        fgbg_feat = torch.cat([fg_feat, bg_feat], dim=1)
         
-        return fg_loss, bg_loss
+        # [B, 2, C]
+        fgbg_feat = F.normalize(fgbg_feat, dim=-1)
+        
+        # [B, 1, C]
+        text_feat = F.normalize(text_feat, dim=-1)
+        
+        
+        # [B, 1, 2]
+        dist_per_text = text_feat @ rearrange(fgbg_feat, 'b l c -> b c l')
+        # [B, 2, 1]
+        dist_per_fgbg = fgbg_feat @ rearrange(text_feat, 'b l c -> b c l')
+        
+        if self.share_temperature:
+            logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
+        else:
+            logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
+
+        batch = text_feat.shape[0]
+        text_len = text_feat.shape[1]
+        fgbg_len = fgbg_feat.shape[1]
+        
+        # [B, 2, 1]
+        pos_labels_batch_fgbg = rearrange(torch.ones_like(dist_per_text), 'b l2 l1 -> b l1 l2')
+        pos_labels_batch_fgbg[:,1,:] = 0.
+        # [B, 1, 2]
+        pos_labels_batch_text = rearrange(torch.ones_like(dist_per_fgbg), 'b l1 l2 -> b l2 l1')
+        pos_labels_batch_text[:, :, 1] = 0.
+
+
+        
+        fgbg_x = rearrange(fgbg_feat, 'b l c -> (b l) c')
+        text_x = rearrange(text_feat, 'b l c -> (b l) c')
+        
+        logits_per_fgbg = fgbg_x @ dist_collect(text_x).t()
+        logits_per_text = text_x @ dist_collect(fgbg_x).t()
+        
+        labels_per_fgbg = F.one_hot(
+            torch.ones(batch, fgbg_len, batch, text_len, dtype=torch.long, device=fgbg_x.device) * dist.get_rank(),
+            num_classes=dist.get_world_size()).to(fgbg_x.dtype)
+        labels_per_fgbg *= rearrange(pos_labels_batch_fgbg, 'b l1 l2 -> b l1 1 l2 1') * repeat(
+            torch.eye(batch, dtype=fgbg_x.dtype, device=fgbg_x.device), 'b1 b2 -> b1 1 b2 1 1')
+        # [BxL1, WxBxL2]
+        labels_per_fgbg = rearrange(labels_per_fgbg, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
+        # [B, L2, B, L1, W]
+        labels_per_text = F.one_hot(
+            torch.ones(batch, text_len, batch, fgbg_len, dtype=torch.long, device=text_x.device) * dist.get_rank(),
+            num_classes=dist.get_world_size()).to(text_x.dtype)
+        labels_per_text *= rearrange(pos_labels_batch_text, 'b l2 l1 -> b l2 1 l1 1') * repeat(
+            torch.eye(batch, dtype=text_x.dtype, device=fgbg_x.device), 'b2 b1 -> b2 1 b1 1 1')
+        # [BxL2, WxBxL1]
+        labels_per_text = rearrange(labels_per_text, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
+        loss_fgbg = self.soft_cross_entropy(logits_per_fgbg * logit_scale, labels_per_fgbg)
+        loss_text = self.soft_cross_entropy(logits_per_text * logit_scale, labels_per_text)
+
+        loss = 0.5 * (loss_fgbg + loss_text)
+        return loss
+    
+    def multi_label_fgbg_loss(self, fg_feat, bg_feat, multi_label_text_feat):
+        
+        text_len = multi_label_text_feat.shape[1]
+        
+        fgbg_loss = 0
+        for idx in range(text_len):
+            text_feat = multi_label_text_feat[:,idx,:]
+            
+            text_feat = text_feat.unsqueeze(1)
+            
+            
+            fgbg_loss += self.fgbg_loss(fg_feat, bg_feat, text_feat)
+            
+        return fgbg_loss
+            
+            
     
     def encode_image(self, image, *, return_feat=False, as_dict=False):
         outs = Result(as_dict)
@@ -296,10 +353,9 @@ class MultiLabelContrastive(nn.Module):
         
         if self.with_fgbg:
             text_multi_label_x = text_outs['text_multi_label_x']
-            text_total_x = torch.cat([text_x.unsqueeze(1), text_multi_label_x], dim=1) # (original_t, multi_lable_t)
             image_fg = image_outs['image_fg'].unsqueeze(1)
             image_bg = image_outs['image_bg'].unsqueeze(1)
-            losses_dict['fg_loss'], losses_dict['bg_loss'] = self.fgbg_loss(image_fg, image_bg, text_total_x)
+            losses_dict['fgbg_loss'] = self.multi_label_fgbg_loss(image_fg, image_bg, text_multi_label_x)
             
         return losses_dict
 

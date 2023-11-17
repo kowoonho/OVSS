@@ -50,6 +50,7 @@ from utils import (auto_resume_helper, build_dataset_class_tokens, build_optimiz
                    get_config, get_grad_norm, get_logger, load_checkpoint, parse_losses, reduce_tensor, save_checkpoint)
 from metric.evaluate import evalutate
 
+import gc
 
 try:
     # noinspection PyUnresolvedReferences
@@ -225,8 +226,18 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
 
     start = time.time()
     end = time.time()
+    
+    empty_cache_time = 4
+    data_len = len(data_loader)
+    refresh_term = data_len // empty_cache_time
+    
+    memory_refresh_idx = [refresh_term, refresh_term*2, refresh_term*3]
+    
+    
     for idx, samples in enumerate(data_loader):
-
+        gc.collect()
+        
+        
         batch_size = config.data.batch_size
 
         losses = model(**samples)
@@ -296,6 +307,9 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
                 log_stat['iter/train_total_loss'] = loss_meter.avg
                 log_stat['iter/learning_rate'] = lr
                 wandb.log(log_stat)
+                
+        if idx in memory_refresh_idx:
+            torch.cuda.empty_cache()
 
     epoch_time = time.time() - start
     logger.info(f'EPOCH {epoch} training takes {datetime.timedelta(seconds=int(epoch_time))}')
