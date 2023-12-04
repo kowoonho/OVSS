@@ -119,7 +119,7 @@ def train(cfg):
     optimizer = build_optimizer(cfg.train, model)
     if cfg.train.amp_opt_level != 'O0':
         model, optimizer = amp.initialize(model, optimizer, opt_level=cfg.train.amp_opt_level)
-    model = MMDistributedDataParallel(model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
+    model = MMDistributedDataParallel(model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False, find_unused_parameters=True)
     model_without_ddp = model.module
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -392,6 +392,8 @@ def validate_seg(config, data_loader, model):
     text_transform = build_text_transform(False, config.data.text_aug, with_dc=False)
     seg_model = build_seg_inference(model_without_ddp, data_loader.dataset, text_transform, config.evaluate.seg)
 
+    
+    
     mmddp_model = MMDistributedDataParallel(
         seg_model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
     mmddp_model.eval()

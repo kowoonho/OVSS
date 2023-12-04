@@ -141,8 +141,8 @@ class GroupViTSegInference(EncoderDecoder):
 
     def forward_train(self, img, img_metas, gt_semantic_seg):
         raise NotImplementedError
-
-    def get_attn_maps(self, img, return_onehot=False, rescale=False):
+    
+    def get_attn_maps(self, img, return_onehot=False, rescale=False, fgbg=False):
         """
         Args:
             img: [B, C, H, W]
@@ -151,12 +151,16 @@ class GroupViTSegInference(EncoderDecoder):
             attn_maps: list[Tensor], attention map of shape [B, H, W, groups]
         """
         results = self.model.img_encoder(img, return_attn=True, as_dict=True)
+        if fgbg == False:
+            attn_results = results['attn_dicts']
+        else:
+            attn_results = results['fgbg_attn_dicts']
         attn_maps = []
         with torch.no_grad():
             prev_attn_masks = None
-            for idx, attn_dict in enumerate(results['attn_dicts']):
+            for idx, attn_dict in enumerate(attn_results):
                 if attn_dict is None:
-                    assert idx == len(results['attn_dicts']) - 1, 'only last layer can be None'
+                    assert idx == len(attn_results) - 1, 'only last layer can be None'
                     continue
                 # [B, G, HxW]
                 # B: batch size (1), nH: number of heads, G: number of group token
@@ -205,6 +209,7 @@ class GroupViTSegInference(EncoderDecoder):
         img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
         # [B, L, C] -> [L, C]
         grouped_img_tokens = img_outs['image_feat'].squeeze(0)
+        
         img_avg_feat = img_outs['image_x']
         
         fg_token = img_outs['image_fg']
@@ -252,15 +257,15 @@ class GroupViTSegInference(EncoderDecoder):
 
         # TODO: check if necessary
         group_affinity_mat *= pre_group_affinity_mat
-
         
         pred_logits = torch.zeros(num_classes, *attn_map.shape[:2], device=img.device, dtype=img.dtype)
 
         pred_logits[class_offset:] = rearrange(onehot_attn_map @ group_affinity_mat, 'h w c -> c h w')
+        
         if self.with_bg:
             bg_thresh = min(self.bg_thresh, group_affinity_mat.max().item())
             pred_logits[0, (onehot_attn_map @ group_affinity_mat).max(dim=-1).values < bg_thresh] = 1
-            
+
         return pred_logits.unsqueeze(0)
 
     def blend_result(self, img, result, palette=None, out_file=None, opacity=0.5, with_bg=False):
@@ -294,7 +299,7 @@ class GroupViTSegInference(EncoderDecoder):
     def show_result(self, img_show, img_tensor, result, out_file, vis_mode='input'):
 
         assert vis_mode in [
-            'input', 'pred', 'input_pred', 'all_groups', 'first_group', 'final_group', 'input_pred_label'
+            'input', 'pred', 'input_pred', 'all_groups', 'first_group', 'final_group', 'input_pred_label', 'fgbg_group'
         ], vis_mode
 
         if vis_mode == 'input':
@@ -381,5 +386,21 @@ class GroupViTSegInference(EncoderDecoder):
                     palette=GROUP_PALETTE[sum(num_groups[:layer_idx]):sum(num_groups[:layer_idx + 1])],
                     out_file=layer_out_file,
                     opacity=0.5)
+        elif vis_mode == 'fgbg_group':
+            fgbg_attn_map_list = self.get_attn_maps(img_tensor, fgbg=True)
+            assert len(fgbg_attn_map_list) in [1, 2]
+            
+            attn_map = rearrange(attn_map, 'b h w g -> b g h w')
+            attn_map = F.interpolate(
+                    attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
+            group_result = attn_map.argmax(dim=1).cpu().numpy()
+            self.blend_result(
+                img=img_show,
+                result=group_result,
+                out_file=layer_out_file,
+                opacity=0.5)
+            
         else:
             raise ValueError(f'Unknown vis_type: {vis_mode}')
+
+        

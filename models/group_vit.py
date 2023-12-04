@@ -79,6 +79,7 @@ def gumbel_softmax(logits: torch.Tensor, tau: float = 1, hard: bool = False, dim
     else:
         # Reparametrization trick.
         ret = y_soft
+        
     return ret
 
 
@@ -146,10 +147,13 @@ class AssignAttention(nn.Module):
         # [B, nh, S, C//nh]
         v = rearrange(self.v_proj(value), 'b n (h c)-> b h n c', h=self.num_heads, b=B, c=C // self.num_heads)
 
+
+        
         # [B, nh, N, S]
         raw_attn = (q @ k.transpose(-2, -1)) * self.scale
-
+        
         attn = self.get_attn(raw_attn)
+        
         if return_attn:
             hard_attn = attn.clone()
             soft_attn = self.get_attn(raw_attn, gumbel=False, hard=False)
@@ -350,7 +354,6 @@ class Attention(nn.Module):
             k = rearrange(self.k_proj(key), 'b n (h c)-> b h n c', h=self.num_heads, b=B, c=C // self.num_heads)
             # [B, nh, S, C//nh]
             v = rearrange(self.v_proj(value), 'b n (h c)-> b h n c', h=self.num_heads, b=B, c=C // self.num_heads)
-
         # [B, nh, N, S]
         attn = (q @ k.transpose(-2, -1)) * self.scale
         if mask is not None:
@@ -438,6 +441,7 @@ class AttnBlock(nn.Module):
     def forward(self, x, mask=None):
         x = x + self.drop_path(self.attn(self.norm1(x), mask=mask))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
+        
         return x
 
 
@@ -713,8 +717,6 @@ class Group_fgbg(nn.Module):
         fg_token = self.fg_token.expand(x.size(0), -1, -1)
         bg_token = self.bg_token.expand(x.size(0), -1, -1)
 
-        B, L, C = x.shape
-        
         fgbg_tokens = self.concat_x(fg_token, bg_token)
         cat_x = self.concat_x(x, fgbg_tokens)
         
@@ -728,6 +730,71 @@ class Group_fgbg(nn.Module):
         fg_token, bg_token = x[:, 0, :], x[:, 1, :]
         
         return fg_token, bg_token, attn_dict
+
+class Key_token_selection(nn.Module):
+    def __init__(self,
+                 dim,
+                 num_heads=1,
+                 qk_scale = None,
+                 qkv_bias=False,
+                 gumbel=False,
+                 hard=True,
+                 gumbel_tau=1.,
+                 sum_assign=False,
+                 assign_eps=1.):
+        super().__init__()
+        
+        self.q_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        self.k_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        
+        self.num_heads=num_heads
+        head_dim = dim // num_heads
+        
+        self.scale = qk_scale or head_dim**-0.5
+        self.hard = hard
+        self.gumbel = gumbel
+        self.gumbel_tau = gumbel_tau
+        self.sum_assign = sum_assign
+        self.assign_eps = assign_eps
+        
+    def get_attn(self, attn, gumbel=None, hard=None):
+
+        if gumbel is None:
+            gumbel = self.gumbel
+
+        if hard is None:
+            hard = self.hard
+
+        attn_dim = -2
+        if gumbel and self.training:
+            attn = gumbel_softmax(attn, dim=attn_dim, hard=hard, tau=self.gumbel_tau)
+        else:
+            if hard:
+                attn = hard_softmax(attn, dim=attn_dim)
+            else:
+                attn = F.softmax(attn, dim=attn_dim)
+
+        return attn
+    def forward(self, query, key, return_attn=False):
+        B, N, C = query.shape
+        S = key.size(1)
+        q = rearrange(self.q_proj(query), 'b n (h c)-> b h n c', h=self.num_heads, b=B, n=N, c=C // self.num_heads)
+        # [B, nh, S, C//nh]
+        k = rearrange(self.k_proj(key), 'b n (h c)-> b h n c', h=self.num_heads, b=B, c=C // self.num_heads)
+        
+        raw_attn = (q @ k.transpose(-2, -1)) * self.scale
+        
+        attn = self.get_attn(raw_attn)
+        
+        if not self.sum_assign:
+            attn = attn / (attn.sum(dim=-1, keepdim=True) + self.assign_eps)
+        attn = self.attn_drop(attn)
+        assert attn.shape == (B, self.num_heads, N, S)
+        
+        
+        
+        return attn
+    
 
 @MODELS.register_module()
 class GroupViT(nn.Module):
@@ -894,7 +961,8 @@ class GroupViT(nn.Module):
 
         self.norm = norm_layer(self.num_features)
         self.head = nn.Linear(self.num_features, num_classes) if num_classes > 0 else nn.Identity()
-
+        
+        
         self.apply(self._init_weights)
 
     def load_state_dict(self, state_dict: 'OrderedDict[str, torch.Tensor]', strict: bool = True):
@@ -975,11 +1043,8 @@ class GroupViT(nn.Module):
 
         return x, group_token, attn_dict_list
         
-        
-
     def forward_image_head(self, x):
         """
-
         Args:
             x: shape [B, L, C]
 
@@ -993,24 +1058,35 @@ class GroupViT(nn.Module):
 
         return x
 
-    def forward(self, x, *, return_feat=False, return_attn=False, as_dict=False):
+    def forward(self, x, *, return_feat=False, return_attn=False, as_dict=False, return_fgbg=False):
         x, group_token, attn_dicts = self.forward_features(x, return_attn=return_attn)
-
-        fg_token, bg_token, fgbg_attn_dicts = self.group_fgbg_layer(x)
         
         x_feat = x if return_feat else None
         
+        
         outs = Result(as_dict=as_dict)
-
+        
         outs.append(self.forward_image_head(x), name='x')
-        outs.append(fg_token, name='fg')
-        outs.append(bg_token, name='bg')
+        
+        if return_fgbg:
+            fg_token, bg_token, fgbg_attn_dicts = self.group_fgbg_layer(x)
+            
+            fg_feat = fg_token if return_feat else None
+            bg_feat = bg_token if return_feat else None
+            outs.append(fg_token, name='fg')
+            outs.append(bg_token, name='bg')
         
         if return_feat:
             outs.append(x_feat, name='feat')
+            
+            if return_fgbg:
+                outs.append(fg_feat, name='fg_feat')
+                outs.append(bg_feat, name='bg_feat')
 
         if return_attn:
             outs.append(attn_dicts, name='attn_dicts')
+            if return_fgbg:
+                outs.append(fgbg_attn_dicts, name='fgbg_attn_dicts')
             
         return outs.as_return()
     

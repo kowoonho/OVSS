@@ -340,4 +340,5 @@ class WordAugTokenizeWrapper:
             prompt_texts += [text] * (self.max_word - len(prompt_texts))
 
         texts = [text] + prompt_texts
+        
         return self.tokenize(texts)

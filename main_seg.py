@@ -80,7 +80,7 @@ def inference(cfg):
     logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
     model = build_model(cfg.model)
     model.cuda()
-    logger.info(str(model))
+    # logger.info(str(model))
 
     if cfg.train.amp_opt_level != 'O0':
         model = amp.initialize(model, None, opt_level=cfg.train.amp_opt_level)
@@ -148,7 +148,7 @@ def vis_seg(config, data_loader, model, vis_modes):
 
 def main():
     args = parse_args()
-    cfg = get_config(args)
+    cfg = get_config(args, mode='inference')
     
     if cfg.train.amp_opt_level != 'O0':
         assert amp is not None, 'amp not installed!'
@@ -181,7 +181,7 @@ def main():
         logger.info(f'Full config saved to {path}')
 
     # print config
-    logger.info(OmegaConf.to_yaml(cfg))
+    # logger.info(OmegaConf.to_yaml(cfg))
 
     inference(cfg)
     dist.barrier()
