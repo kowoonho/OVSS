@@ -112,8 +112,6 @@ def train(cfg):
     logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
     
     model = build_model(cfg.model)
-    print(model)
-    exit()
     model.cuda()
     # logger.info(str(model))
 
