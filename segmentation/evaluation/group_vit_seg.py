@@ -129,6 +129,7 @@ class GroupViTSegInference(EncoderDecoder):
         self.register_buffer('text_embedding', text_embedding)
         self.with_bg = with_bg
         self.bg_thresh = test_cfg['bg_thresh']
+        self.fg_thresh = 0.75
         if self.with_bg:
             self.num_classes = len(text_embedding) + 1
         else:
@@ -140,8 +141,8 @@ class GroupViTSegInference(EncoderDecoder):
 
     def forward_train(self, img, img_metas, gt_semantic_seg):
         raise NotImplementedError
-
-    def get_attn_maps(self, img, return_onehot=False, rescale=False):
+    
+    def get_attn_maps(self, img, return_onehot=False, rescale=False, fgbg=False):
         """
         Args:
             img: [B, C, H, W]
@@ -150,13 +151,16 @@ class GroupViTSegInference(EncoderDecoder):
             attn_maps: list[Tensor], attention map of shape [B, H, W, groups]
         """
         results = self.model.img_encoder(img, return_attn=True, as_dict=True)
-
+        if fgbg == False:
+            attn_results = results['attn_dicts']
+        else:
+            attn_results = results['fgbg_attn_dicts']
         attn_maps = []
         with torch.no_grad():
             prev_attn_masks = None
-            for idx, attn_dict in enumerate(results['attn_dicts']):
+            for idx, attn_dict in enumerate(attn_results):
                 if attn_dict is None:
-                    assert idx == len(results['attn_dicts']) - 1, 'only last layer can be None'
+                    assert idx == len(attn_results) - 1, 'only last layer can be None'
                     continue
                 # [B, G, HxW]
                 # B: batch size (1), nH: number of heads, G: number of group token
@@ -196,23 +200,31 @@ class GroupViTSegInference(EncoderDecoder):
         map of the same size as input."""
 
         assert img.shape[0] == 1, 'batch size must be 1'
-
         # [B, C, H, W], get the last one only
         attn_map = self.get_attn_maps(img, rescale=True)[-1]
+        
         # [H, W, G], select batch idx 0
         attn_map = attn_map[0]
 
         img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
         # [B, L, C] -> [L, C]
         grouped_img_tokens = img_outs['image_feat'].squeeze(0)
+        
         img_avg_feat = img_outs['image_x']
+        
+        fg_token = img_outs['image_fg']
+        bg_token = img_outs['image_bg']
+        
+        fgbg_tokens = torch.cat([fg_token, bg_token], dim=0)
+        
         # [G, C]
         grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
         img_avg_feat = F.normalize(img_avg_feat, dim=-1)
-
+        
+        fgbg_tokens = F.normalize(fgbg_tokens, dim=-1)
+           
         # [H, W, G]
         onehot_attn_map = F.one_hot(attn_map.argmax(dim=-1), num_classes=attn_map.shape[-1]).to(dtype=attn_map.dtype)
-
         num_fg_classes = self.text_embedding.shape[0]
         class_offset = 1 if self.with_bg else 0
         text_tokens = self.text_embedding
@@ -222,7 +234,15 @@ class GroupViTSegInference(EncoderDecoder):
         # [G, N]
         group_affinity_mat = (grouped_img_tokens @ text_tokens.T) * logit_scale
         pre_group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
-
+        
+        fgbg_affinity_mat = (grouped_img_tokens @ fgbg_tokens.T) * logit_scale
+        
+        fg_affinity_mat = fgbg_affinity_mat[:,0]
+        bg_affinity_mat = fgbg_affinity_mat[:,1]
+        
+        fg_indices = (fg_affinity_mat > self.fg_thresh).unsqueeze(1).float()
+        bg_indices = (bg_affinity_mat > self.bg_thresh).unsqueeze(1).float()
+        
         avg_affinity_mat = (img_avg_feat @ text_tokens.T) * logit_scale
         avg_affinity_mat = F.softmax(avg_affinity_mat, dim=-1)
         affinity_mask = torch.zeros_like(avg_affinity_mat)
@@ -230,15 +250,18 @@ class GroupViTSegInference(EncoderDecoder):
         affinity_mask.scatter_add_(
             dim=-1, index=avg_affinity_topk.indices, src=torch.ones_like(avg_affinity_topk.values))
         group_affinity_mat.masked_fill_(~affinity_mask.bool(), float('-inf'))
-
+        # group_affinity_mat.masked_fill_(bg_indices.bool(), float('-inf'))
+        
         group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
+        
 
         # TODO: check if necessary
         group_affinity_mat *= pre_group_affinity_mat
-
+        
         pred_logits = torch.zeros(num_classes, *attn_map.shape[:2], device=img.device, dtype=img.dtype)
 
         pred_logits[class_offset:] = rearrange(onehot_attn_map @ group_affinity_mat, 'h w c -> c h w')
+        
         if self.with_bg:
             bg_thresh = min(self.bg_thresh, group_affinity_mat.max().item())
             pred_logits[0, (onehot_attn_map @ group_affinity_mat).max(dim=-1).values < bg_thresh] = 1
@@ -276,7 +299,7 @@ class GroupViTSegInference(EncoderDecoder):
     def show_result(self, img_show, img_tensor, result, out_file, vis_mode='input'):
 
         assert vis_mode in [
-            'input', 'pred', 'input_pred', 'all_groups', 'first_group', 'final_group', 'input_pred_label'
+            'input', 'pred', 'input_pred', 'all_groups', 'first_group', 'final_group', 'input_pred_label', 'fgbg_group'
         ], vis_mode
 
         if vis_mode == 'input':
@@ -363,5 +386,21 @@ class GroupViTSegInference(EncoderDecoder):
                     palette=GROUP_PALETTE[sum(num_groups[:layer_idx]):sum(num_groups[:layer_idx + 1])],
                     out_file=layer_out_file,
                     opacity=0.5)
+        elif vis_mode == 'fgbg_group':
+            fgbg_attn_map_list = self.get_attn_maps(img_tensor, fgbg=True)
+            assert len(fgbg_attn_map_list) in [1, 2]
+            
+            attn_map = rearrange(attn_map, 'b h w g -> b g h w')
+            attn_map = F.interpolate(
+                    attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
+            group_result = attn_map.argmax(dim=1).cpu().numpy()
+            self.blend_result(
+                img=img_show,
+                result=group_result,
+                out_file=layer_out_file,
+                opacity=0.5)
+            
         else:
             raise ValueError(f'Unknown vis_type: {vis_mode}')
+
+        

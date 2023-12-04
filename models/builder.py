@@ -15,7 +15,7 @@ MODELS = Registry('model')
 
 
 def build_model(config):
-
-    model = MODELS.build(OmegaConf.to_container(config, resolve=True))
+    container = OmegaConf.to_container(config, resolve=True)
+    model = MODELS.build(container)
 
     return model

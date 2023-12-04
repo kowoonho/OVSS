@@ -50,6 +50,7 @@ from utils import (auto_resume_helper, build_dataset_class_tokens, build_optimiz
                    get_config, get_grad_norm, get_logger, load_checkpoint, parse_losses, reduce_tensor, save_checkpoint)
 from metric.evaluate import evalutate
 
+import gc
 
 try:
     # noinspection PyUnresolvedReferences
@@ -118,7 +119,7 @@ def train(cfg):
     optimizer = build_optimizer(cfg.train, model)
     if cfg.train.amp_opt_level != 'O0':
         model, optimizer = amp.initialize(model, optimizer, opt_level=cfg.train.amp_opt_level)
-    model = MMDistributedDataParallel(model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
+    model = MMDistributedDataParallel(model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False, find_unused_parameters=True)
     model_without_ddp = model.module
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -150,6 +151,8 @@ def train(cfg):
             logger.info(f'mIoU of the network on the {len(data_loader_seg.dataset)} test images: {miou:.2f}%')
         if cfg.evaluate.eval_only:
             return
+
+    
 
     logger.info('Start training')
     start_time = time.time()
@@ -223,14 +226,24 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
 
     start = time.time()
     end = time.time()
+    
+    empty_cache_time = 4
+    data_len = len(data_loader)
+    refresh_term = data_len // empty_cache_time
+    
+    memory_refresh_idx = [refresh_term, refresh_term*2, refresh_term*3]
+    
+    
     for idx, samples in enumerate(data_loader):
-
+        gc.collect()
+        
+        
         batch_size = config.data.batch_size
 
         losses = model(**samples)
-
+        
         loss, log_vars = parse_losses(losses)
-
+        
         if config.train.accumulation_steps > 1:
             loss = loss / config.train.accumulation_steps
             if config.train.amp_opt_level != 'O0':
@@ -294,6 +307,9 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
                 log_stat['iter/train_total_loss'] = loss_meter.avg
                 log_stat['iter/learning_rate'] = lr
                 wandb.log(log_stat)
+                
+        if idx in memory_refresh_idx:
+            torch.cuda.empty_cache()
 
     epoch_time = time.time() - start
     logger.info(f'EPOCH {epoch} training takes {datetime.timedelta(seconds=int(epoch_time))}')
@@ -376,6 +392,8 @@ def validate_seg(config, data_loader, model):
     text_transform = build_text_transform(False, config.data.text_aug, with_dc=False)
     seg_model = build_seg_inference(model_without_ddp, data_loader.dataset, text_transform, config.evaluate.seg)
 
+    
+    
     mmddp_model = MMDistributedDataParallel(
         seg_model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
     mmddp_model.eval()
@@ -390,7 +408,7 @@ def validate_seg(config, data_loader, model):
 
     
     ret_metric = evalutate(results)
-    print(ret_metric)
+    
     
     if dist.get_rank() == 0:
         metric = [data_loader.dataset.evaluate(results, metric='mIoU')]
@@ -460,7 +478,7 @@ def main():
     logger.info(f'Git hash: {get_git_hash(digits=7)}')
 
     # print config
-    logger.info(OmegaConf.to_yaml(cfg))
+    # logger.info(OmegaConf.to_yaml(cfg))
 
     train(cfg)
     dist.barrier()
