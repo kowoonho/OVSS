@@ -80,7 +80,7 @@ evaluate:
   eval_only: false
   eval_freq: 1
   task:
-    - cls
+    # - cls
     - seg
   cls:
     save_best: true

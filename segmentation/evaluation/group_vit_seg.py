@@ -212,16 +212,16 @@ class GroupViTSegInference(EncoderDecoder):
         
         img_avg_feat = img_outs['image_x']
         
-        fg_token = img_outs['image_fg']
-        bg_token = img_outs['image_bg']
+        # fg_token = img_outs['image_fg']
+        # bg_token = img_outs['image_bg']
         
-        fgbg_tokens = torch.cat([fg_token, bg_token], dim=0)
+        # fgbg_tokens = torch.cat([fg_token, bg_token], dim=0)
         
         # [G, C]
         grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
         img_avg_feat = F.normalize(img_avg_feat, dim=-1)
         
-        fgbg_tokens = F.normalize(fgbg_tokens, dim=-1)
+        # fgbg_tokens = F.normalize(fgbg_tokens, dim=-1)
            
         # [H, W, G]
         onehot_attn_map = F.one_hot(attn_map.argmax(dim=-1), num_classes=attn_map.shape[-1]).to(dtype=attn_map.dtype)
@@ -235,13 +235,13 @@ class GroupViTSegInference(EncoderDecoder):
         group_affinity_mat = (grouped_img_tokens @ text_tokens.T) * logit_scale
         pre_group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
         
-        fgbg_affinity_mat = (grouped_img_tokens @ fgbg_tokens.T) * logit_scale
+        # fgbg_affinity_mat = (grouped_img_tokens @ fgbg_tokens.T) * logit_scale
         
-        fg_affinity_mat = fgbg_affinity_mat[:,0]
-        bg_affinity_mat = fgbg_affinity_mat[:,1]
+        # fg_affinity_mat = fgbg_affinity_mat[:,0]
+        # bg_affinity_mat = fgbg_affinity_mat[:,1]
         
-        fg_indices = (fg_affinity_mat > self.fg_thresh).unsqueeze(1).float()
-        bg_indices = (bg_affinity_mat > self.bg_thresh).unsqueeze(1).float()
+        # fg_indices = (fg_affinity_mat > self.fg_thresh).unsqueeze(1).float()
+        # bg_indices = (bg_affinity_mat > self.bg_thresh).unsqueeze(1).float()
         
         avg_affinity_mat = (img_avg_feat @ text_tokens.T) * logit_scale
         avg_affinity_mat = F.softmax(avg_affinity_mat, dim=-1)
