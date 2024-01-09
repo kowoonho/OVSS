@@ -19,6 +19,7 @@ from einops import rearrange
 from mmseg.models import EncoderDecoder
 from PIL import Image
 from utils import get_logger
+from utils.imutils import binary_mask
 
 GROUP_PALETTE = np.loadtxt(osp.join(osp.dirname(osp.abspath(__file__)), 'group_palette.txt'), dtype=np.uint8)[:, ::-1]
 
@@ -212,16 +213,16 @@ class GroupViTSegInference(EncoderDecoder):
         
         img_avg_feat = img_outs['image_x']
         
-        fg_token = img_outs['image_fg']
-        bg_token = img_outs['image_bg']
+        # fg_token = img_outs['image_fg']
+        # bg_token = img_outs['image_bg']
         
-        fgbg_tokens = torch.cat([fg_token, bg_token], dim=0)
+        # fgbg_tokens = torch.cat([fg_token, bg_token], dim=0)
         
         # [G, C]
         grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
         img_avg_feat = F.normalize(img_avg_feat, dim=-1)
         
-        fgbg_tokens = F.normalize(fgbg_tokens, dim=-1)
+        # fgbg_tokens = F.normalize(fgbg_tokens, dim=-1)
            
         # [H, W, G]
         onehot_attn_map = F.one_hot(attn_map.argmax(dim=-1), num_classes=attn_map.shape[-1]).to(dtype=attn_map.dtype)
@@ -235,13 +236,14 @@ class GroupViTSegInference(EncoderDecoder):
         group_affinity_mat = (grouped_img_tokens @ text_tokens.T) * logit_scale
         pre_group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
         
-        fgbg_affinity_mat = (grouped_img_tokens @ fgbg_tokens.T) * logit_scale
         
-        fg_affinity_mat = fgbg_affinity_mat[:,0]
-        bg_affinity_mat = fgbg_affinity_mat[:,1]
+        # fgbg_affinity_mat = (grouped_img_tokens @ fgbg_tokens.T) * logit_scale
         
-        fg_indices = (fg_affinity_mat > self.fg_thresh).unsqueeze(1).float()
-        bg_indices = (bg_affinity_mat > self.bg_thresh).unsqueeze(1).float()
+        # fg_affinity_mat = fgbg_affinity_mat[:,0]
+        # bg_affinity_mat = fgbg_affinity_mat[:,1]
+        
+        # fg_indices = (fg_affinity_mat > self.fg_thresh).unsqueeze(1).float()
+        # bg_indices = (bg_affinity_mat > self.bg_thresh).unsqueeze(1).float()
         
         avg_affinity_mat = (img_avg_feat @ text_tokens.T) * logit_scale
         avg_affinity_mat = F.softmax(avg_affinity_mat, dim=-1)
@@ -253,7 +255,6 @@ class GroupViTSegInference(EncoderDecoder):
         # group_affinity_mat.masked_fill_(bg_indices.bool(), float('-inf'))
         
         group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
-        
 
         # TODO: check if necessary
         group_affinity_mat *= pre_group_affinity_mat
@@ -265,7 +266,6 @@ class GroupViTSegInference(EncoderDecoder):
         if self.with_bg:
             bg_thresh = min(self.bg_thresh, group_affinity_mat.max().item())
             pred_logits[0, (onehot_attn_map @ group_affinity_mat).max(dim=-1).values < bg_thresh] = 1
-
         return pred_logits.unsqueeze(0)
 
     def blend_result(self, img, result, palette=None, out_file=None, opacity=0.5, with_bg=False):
@@ -297,7 +297,7 @@ class GroupViTSegInference(EncoderDecoder):
         return img
 
     def show_result(self, img_show, img_tensor, result, out_file, vis_mode='input'):
-
+        
         assert vis_mode in [
             'input', 'pred', 'input_pred', 'all_groups', 'first_group', 'final_group', 'input_pred_label', 'fgbg_group'
         ], vis_mode
@@ -375,6 +375,11 @@ class GroupViTSegInference(EncoderDecoder):
                 attn_map = F.interpolate(
                     attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
                 group_result = attn_map.argmax(dim=1).cpu().numpy()
+                
+                # binary_masks = binary_mask(group_result[0])
+                # for i in range(binary_masks.shape[0]):
+                #     mmcv.imwrite(binary_masks[i] * 255.0, f"/workspace/Dataset/output/test/test{i}.png")
+                # exit()
                 if vis_mode == 'all_groups':
                     layer_out_file = out_file.replace(
                         osp.splitext(out_file)[-1], f'_layer{layer_idx}{osp.splitext(out_file)[-1]}')
@@ -402,5 +407,73 @@ class GroupViTSegInference(EncoderDecoder):
             
         else:
             raise ValueError(f'Unknown vis_type: {vis_mode}')
+    
+    def make_grouping_img(self, attn_map, output_path):
+        
+        attn_map = rearrange(attn_map, 'b h w g -> b g h w')
+        # attn_map = F.interpolate(
+        #             attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
+        
+        group_result = attn_map.argmax(dim=1).cpu().numpy()
+        
+        binary_masks = binary_mask(group_result[0])
+        labels = np.unique(group_result[0])
+        for i, label in enumerate(labels):
+            mmcv.imwrite(binary_masks[i] * 255.0, osp.join(output_path, "test", f"test{label}.png"))
+            
+        return labels
+            
+        
+    
+    def group_result(self, img, output_path):
+        
+        assert img.shape[0] == 1, 'batch size must be 1'
+        
+        attn_map = self.get_attn_maps(img, rescale=True)[-1] # [B, H, W, G]
+        
+        group_labels = self.make_grouping_img(attn_map, output_path)
+        
+        attn_map = attn_map[0]
+        
+        img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
+        
+        grouped_img_tokens = img_outs['image_feat'].squeeze(0)
+        
+        img_avg_feat = img_outs['image_x']
+        
+        # [G, C]
+        grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
+        img_avg_feat = F.normalize(img_avg_feat, dim=-1)
+        
+        # [H, W, G]
+        onehot_attn_map = F.one_hot(attn_map.argmax(dim=-1), num_classes=attn_map.shape[-1]).to(dtype=attn_map.dtype)
+        num_fg_classes = self.text_embedding.shape[0]
+        class_offset = 1 if self.with_bg else 0
+        text_tokens = self.text_embedding
+        num_classes = num_fg_classes + class_offset
+
+        logit_scale = torch.clamp(self.model.logit_scale.exp(), max=100)
+        # [G, N]
+        group_affinity_mat = (grouped_img_tokens @ text_tokens.T) * logit_scale
+        pre_group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
+        
+        avg_affinity_mat = (img_avg_feat @ text_tokens.T) * logit_scale
+        avg_affinity_mat = F.softmax(avg_affinity_mat, dim=-1)
+        affinity_mask = torch.zeros_like(avg_affinity_mat)
+        avg_affinity_topk = avg_affinity_mat.topk(dim=-1, k=min(5, num_fg_classes))
+        affinity_mask.scatter_add_(
+            dim=-1, index=avg_affinity_topk.indices, src=torch.ones_like(avg_affinity_topk.values))
+        group_affinity_mat.masked_fill_(~affinity_mask.bool(), float('-inf'))
+        
+        group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
+
+        # TODO: check if necessary
+        group_affinity_mat *= pre_group_affinity_mat
+        print(group_affinity_mat[group_labels[1]])
+        
+        
+        
+        
+        
 
         
