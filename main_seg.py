@@ -49,7 +49,7 @@ def parse_args():
 
     parser.add_argument(
         '--resume', 
-        default="/workspace/Dataset/pre-trained_weights/groupvit/group_vit_gcc_yfcc_30e-879422e0.pth",
+        default="/workspace/Dataset/pre-trained_weights/groupvit/ckpt_epoch_29_best_miou.pth",
         help='resume from checkpoint',
     )
     parser.add_argument(
