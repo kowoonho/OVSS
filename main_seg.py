@@ -126,8 +126,6 @@ def vis_seg(config, data_loader, model, vis_modes):
     for batch_indices, data in zip(loader_indices, data_loader):
         with torch.no_grad():
             result = mmddp_model(return_loss=False, **data)
-            print(result[0].shape)
-            exit()
         img_tensor = data['img'][0]
         img_metas = data['img_metas'][0].data[0]
         imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])

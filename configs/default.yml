@@ -1,5 +1,5 @@
 data:
-  batch_size: 256
+  batch_size: 16
   pin_memory: true
   num_workers: 0
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
@@ -7,15 +7,16 @@ data:
   shuffle_buffer: 10000
   seed: ${train.seed}
   dataset:
+    DATA: /workspace/Dataset
     meta:
       gcc3m:
         type: img_txt_pair
-        path: /workspace/Dataset/local_data/gcc3m_shards
+        path: ${data.dataset.DATA}/local_data/gcc3m_shards
         prefix: gcc-train-{000000..000331}.tar
         length: 2891445
       gcc12m:
         type: img_txt_pair
-        path: /workspace/Dataset/local_data/gcc12m_shards
+        path: ${data.dataset.DATA}/local_data/gcc12m_shards
         prefix: gcc-conceptual-12m-{000000..001242}.tar
         length: 11156203
       # yfcc14m:
@@ -30,7 +31,7 @@ data:
       #   length: 11866987
       imagenet:
         type: img_cls_pair
-        path: /workspace/Dataset/local_data/imagenet_shards
+        path: ${data.dataset.DATA}/local_data/imagenet_shards
         prefix: imagenet-val-{000000..000009}.tar
         length: 50000
     train:
