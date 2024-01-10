@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument(
         '--cfg',
         type=str,
-        default="/workspace/Code/OVSS/configs/group_vit_gcc_yfcc_30e.yml",
+        required=True,
         help='path to config file',
     )
     parser.add_argument(
@@ -49,7 +49,7 @@ def parse_args():
 
     parser.add_argument(
         '--resume', 
-        default="/workspace/Dataset/pre-trained_weights/groupvit/ckpt_epoch_29_best_miou.pth",
+        default="/workspace/Dataset/pre-trained_weights/groupvit/group_vit_gcc_yfcc_30e-879422e0.pth",
         help='resume from checkpoint',
     )
     parser.add_argument(
@@ -64,7 +64,7 @@ def parse_args():
         nargs='+')
 
     # distributed training
-    parser.add_argument('--local_rank', type=int, default=1, help='local rank for DistributedDataParallel')
+    parser.add_argument('--local_rank', type=int, required=True, help='local rank for DistributedDataParallel')
 
     args = parser.parse_args()
 
@@ -73,11 +73,10 @@ def parse_args():
 def inference(cfg):
     logger = get_logger()
     data_loader = build_seg_dataloader(build_seg_dataset(cfg.evaluate.seg))
-    dataset = data_loader.dataset
 
-    logger.info(f'Evaluating dataset: {dataset}')
+    # logger.info(f'Evaluating dataset: {dataset}')
 
-    logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
+    # logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
     model = build_model(cfg.model)
     model.cuda()
     # logger.info(str(model))
@@ -85,17 +84,11 @@ def inference(cfg):
     if cfg.train.amp_opt_level != 'O0':
         model = amp.initialize(model, None, opt_level=cfg.train.amp_opt_level)
 
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.info(f'number of params: {n_parameters}')
+    # logger.info(f'number of params: {n_parameters}')
 
     load_checkpoint(cfg, model, None, None)
 
-    if 'seg' in cfg.evaluate.task:
-        miou = validate_seg(cfg, data_loader, model)
-        logger.info(f'mIoU of the network on the {len(data_loader.dataset)} test images: {miou:.2f}%')
-    else:
-        logger.info('No segmentation evaluation specified')
-
+    
     if cfg.vis:
         vis_seg(cfg, data_loader, model, cfg.vis)
 
@@ -118,34 +111,28 @@ def vis_seg(config, data_loader, model, vis_modes):
     mmddp_model.eval()
     model = mmddp_model.module
     device = next(model.parameters()).device
-    dataset = data_loader.dataset
 
-    if dist.get_rank() == 0:
-        prog_bar = mmcv.ProgressBar(len(dataset))
     loader_indices = data_loader.batch_sampler
-    for batch_indices, data in zip(loader_indices, data_loader):
-        with torch.no_grad():
-            result = mmddp_model(return_loss=False, **data)
-            print(result[0].shape)
-            exit()
-        img_tensor = data['img'][0]
-        img_metas = data['img_metas'][0].data[0]
-        imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
-        assert len(imgs) == len(img_metas)
+    batch_indices, data = next(zip(loader_indices, data_loader))
+    
+    with torch.no_grad():
+        result = mmddp_model(return_loss=False, **data)
+    img_tensor = data['img'][0]
+    img_metas = data['img_metas'][0].data[0]
+    imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
+    
+    
+    model.group_result(img_tensor.to(device), config.output)
+    
+    # for batch_idx, img, img_meta in zip(batch_indices, imgs, img_metas):
+    #         h, w, _ = img_meta['img_shape']
+    #         img_show = img[:h, :w, :]
 
-        for batch_idx, img, img_meta in zip(batch_indices, imgs, img_metas):
-            h, w, _ = img_meta['img_shape']
-            img_show = img[:h, :w, :]
-
-            ori_h, ori_w = img_meta['ori_shape'][:-1]
-            img_show = mmcv.imresize(img_show, (ori_w, ori_h))
-            for vis_mode in vis_modes:
-                out_file = osp.join(config.output, 'vis_imgs', vis_mode, f'{batch_idx:04d}.jpg')
-                model.show_result(img_show, img_tensor.to(device), result, out_file, vis_mode)
-            if dist.get_rank() == 0:
-                batch_size = len(result) * dist.get_world_size()
-                for _ in range(batch_size):
-                    prog_bar.update()
+    #         ori_h, ori_w = img_meta['ori_shape'][:-1]
+    #         img_show = mmcv.imresize(img_show, (ori_w, ori_h))
+    #         for vis_mode in vis_modes:
+    #             out_file = osp.join(config.output, 'vis_imgs', vis_mode, f'{batch_idx:04d}.jpg')
+    #             model.show_result(img_show, img_tensor.to(device), result, out_file, vis_mode)
 
 
 def main():
@@ -180,7 +167,7 @@ def main():
     if dist.get_rank() == 0:
         path = os.path.join(cfg.output, 'config.json')
         OmegaConf.save(cfg, path)
-        logger.info(f'Full config saved to {path}')
+        # logger.info(f'Full config saved to {path}')
 
     # print config
     # logger.info(OmegaConf.to_yaml(cfg))

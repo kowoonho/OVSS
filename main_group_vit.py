@@ -193,9 +193,9 @@ def train(cfg):
         if wandb is not None:
             log_stat = {f'epoch/train_{k}': v for k, v in loss_train_dict.items()}
             log_stat.update({
-                'epoch/val_acc1': acc1,
-                'epoch/val_acc5': acc5,
-                'epoch/val_loss': loss,
+                # 'epoch/val_acc1': acc1,
+                # 'epoch/val_acc5': acc5,
+                # 'epoch/val_loss': loss,
                 'epoch/val_miou': miou,
                 'epoch/epoch': epoch,
                 'epoch/n_parameters': n_parameters
@@ -392,6 +392,8 @@ def validate_seg(config, data_loader, model):
     text_transform = build_text_transform(False, config.data.text_aug, with_dc=False)
     seg_model = build_seg_inference(model_without_ddp, data_loader.dataset, text_transform, config.evaluate.seg)
 
+    
+    
     mmddp_model = MMDistributedDataParallel(
         seg_model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
     mmddp_model.eval()
@@ -405,7 +407,7 @@ def validate_seg(config, data_loader, model):
         format_only=False)
 
     
-    ret_metric = evalutate(results)
+    # ret_metric = evalutate(results)
     
     
     if dist.get_rank() == 0:

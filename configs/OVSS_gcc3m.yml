@@ -26,3 +26,4 @@ model:
   multi_label: ${data.text_aug.multi_label}
   with_fgbg: False
   with_multi_label_loss: False
+  with_key_token: True

@@ -23,6 +23,7 @@ from .builder import MODELS
 from .misc import Result
 
 
+
 def dist_collect(x):
     """ collect all tensor from all GPUs
     args:
@@ -91,7 +92,12 @@ class MultiLabelContrastive(nn.Module):
                  share_temperature=False,
                  multi_label_loss_weight=1.0,
                  with_fgbg=False,
+<<<<<<< HEAD
                  with_multi_label_loss=False):
+=======
+                 with_multi_label_loss=False,
+                 with_key_token=False):
+>>>>>>> da37f373dc8a787c697cef406a4b950fecebf404
         super().__init__()
 
         self.img_encoder = MODELS.build(img_encoder)
@@ -106,7 +112,7 @@ class MultiLabelContrastive(nn.Module):
         self.multi_label = multi_label
         self.with_fgbg = with_fgbg
         self.with_multi_label_loss = with_multi_label_loss
-        
+        self.with_key_token = with_key_token
         if proj_num_layers > 0:
             self.img_projector = ProjectMLP(
                 in_dim=self.img_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
@@ -127,6 +133,11 @@ class MultiLabelContrastive(nn.Module):
     @property
     def with_multi_label(self):
         return self.multi_label > 0
+    
+    def gumbel_softmax(self, data, dim, tau=1., hard=True):
+        one_hot =  F.gumbel_softmax(data, tau=tau, hard=hard, dim=dim)
+        
+        return one_hot
     
     def loss(self, image_x, text_x):
 
@@ -280,6 +291,8 @@ class MultiLabelContrastive(nn.Module):
         loss = 0.5 * (loss_fgbg + loss_text)
         return loss
     
+    
+    
     def multi_label_fgbg_loss(self, fg_feat, bg_feat, multi_label_text_feat):
         
         text_len = multi_label_text_feat.shape[1]
@@ -294,17 +307,64 @@ class MultiLabelContrastive(nn.Module):
             fgbg_loss += self.fgbg_loss(fg_feat, bg_feat, text_feat)
             
         return fgbg_loss
-            
-            
     
-    def encode_image(self, image, *, return_feat=False, as_dict=False):
+    def multi_label_key_loss(self, key_feat, nonkey_feat, multi_label_text_feat):
+        
+        text_len = multi_label_text_feat.shape[1]
+        
+        key_loss = 0
+        for idx in range(text_len):
+            text_feat = multi_label_text_feat[:,idx,:]
+            
+            text_feat = text_feat.unsqueeze(1)
+            
+            
+            key_loss += self.fgbg_loss(key_feat, nonkey_feat, text_feat)
+            
+        return key_loss
+    
+    def key_token_selection(self, image_feat, text_feat):
+        B, G, C = image_feat.shape
+        
+        image_feat = F.normalize(image_feat, dim=-1)
+        text_feat = F.normalize(text_feat, dim=-1)
+        
+        token_score_matrix = image_feat @ rearrange(text_feat, 'b l c -> b c l')
+        token_score = token_score_matrix.squeeze(-1)
+        
+        final_score = torch.zeros_like(token_score)
+        
+        for _ in range(4):
+            one_hot = self.gumbel_softmax(token_score, tau=0.5, dim=1)
+            _, indices = torch.max(one_hot, dim=1)
+            final_score.scatter_(1, indices.unsqueeze(1), 1)
+            token_score.scatter_(1, indices.unsqueeze(1), 0)
+            
+        key_mask = final_score.unsqueeze(-1).expand(-1, -1, C)
+        nonkey_mask = 1 - key_mask
+        
+        key_tokens_feat = image_feat * key_mask
+        nonkey_tokens_feat = image_feat * nonkey_mask
+        
+        non_zero_counts = key_mask.sum(dim=1)
+        zero_counts = nonkey_mask.sum(dim=1)
+        
+        key_token = key_tokens_feat.sum(dim=1) / non_zero_counts
+        nonkey_token = nonkey_tokens_feat.sum(dim=1) / zero_counts
+        
+        return key_token, nonkey_token
+        
+        
+    def encode_image(self, image, *, return_feat=False, as_dict=False, return_fgbg=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
+        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True, return_fgbg=return_fgbg)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
-        outs.append(self.img_projector(img_outs['fg']), 'image_fg')
-        outs.append(self.img_projector(img_outs['bg']), 'image_bg')
         
+        if return_fgbg:
+            outs.append(self.img_projector(img_outs['fg']), 'image_fg')
+            outs.append(self.img_projector(img_outs['bg']), 'image_bg')
+            
         if return_feat:
             outs.append(self.img_projector(img_outs['feat']), 'image_feat')
         return outs.as_return()
@@ -331,18 +391,20 @@ class MultiLabelContrastive(nn.Module):
             outs.update(text_x=text_x, text_multi_label_x=text_multi_label_x)
 
         return outs.as_return()
-
+    
+    
     def forward_train(self, image, text):
-        image_outs = self.encode_image(image, as_dict=True)
+        image_outs = self.encode_image(image, return_feat = True, as_dict=True, return_fgbg=self.with_fgbg)
         # [B, C]
         image_x = image_outs['image_x']
+        # [B, G, C]
+        image_feat = image_outs['image_feat']
         
         text_outs = self.encode_text(text, as_dict=True)
         # [B, C]
         text_x = text_outs['text_x']
-
+        
         losses = self.loss(image_x, text_x)
-
         losses_dict = dict(loss=losses)
         
         if self.with_multi_label_loss:
@@ -356,6 +418,13 @@ class MultiLabelContrastive(nn.Module):
             image_fg = image_outs['image_fg'].unsqueeze(1)
             image_bg = image_outs['image_bg'].unsqueeze(1)
             losses_dict['fgbg_loss'] = self.multi_label_fgbg_loss(image_fg, image_bg, text_multi_label_x)
+            
+        if self.with_key_token:
+            text_multi_label_x = text_outs['text_multi_label_x']
+            key_feat, nonkey_feat = self.key_token_selection(image_feat, text_x.unsqueeze(1))
+            key_feat = key_feat.unsqueeze(1)
+            nonkey_feat = nonkey_feat.unsqueeze(1)
+            losses_dict['key_loss'] = self.multi_label_key_loss(key_feat, nonkey_feat, text_multi_label_x)
             
         return losses_dict
 

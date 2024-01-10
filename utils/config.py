@@ -40,7 +40,7 @@ def make_timestamp():
     
     
 
-def get_config(args):
+def get_config(args, mode='train'):
     cfg = load_config(args.cfg)
     OmegaConf.set_struct(cfg, True)
     
@@ -71,10 +71,10 @@ def get_config(args):
     cfg.model_name = cfg.model_name + f'_bs{cfg.data.batch_size}x{world_size}'
 
     if hasattr(args, 'output') and args.output:
-        cfg.output = osp.join(args.output, cfg.model_name)
+        cfg.output = osp.join(args.output, mode, cfg.model_name)
     else:
-        cfg.output = osp.join('output', cfg.model_name)
-
+        cfg.output = osp.join('output', mode, cfg.model_name)
+        
     if hasattr(args, 'tag') and args.tag:
         cfg.tag = args.tag
         cfg.output = osp.join(cfg.output, cfg.tag)
