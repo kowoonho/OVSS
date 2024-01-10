@@ -48,7 +48,7 @@ def load_checkpoint(config, model, optimizer, lr_scheduler):
     logger.info(f'==============> Resuming form {config.checkpoint.resume}....................')
     checkpoint = CheckpointLoader.load_checkpoint(config.checkpoint.resume, map_location='cpu')
     msg = model.load_state_dict(checkpoint['model'], strict=False)
-    logger.info(msg)
+    # logger.info(msg)
     metrics = defaultdict(float)
     if (not config.evaluate.eval_only and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint
             and 'epoch' in checkpoint):

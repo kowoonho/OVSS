@@ -1,5 +1,5 @@
 data:
-  batch_size: 64
+  batch_size: 256
   pin_memory: true
   num_workers: 0
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
@@ -81,7 +81,7 @@ evaluate:
   eval_freq: 1
   task:
     - cls
-    - seg
+    # - seg
   cls:
     save_best: true
     template: subset

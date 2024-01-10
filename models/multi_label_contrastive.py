@@ -90,7 +90,7 @@ class MultiLabelContrastive(nn.Module):
                  multi_label=0,
                  share_temperature=False,
                  multi_label_loss_weight=1.0,
-                 with_fgbg=True,
+                 with_fgbg=False,
                  with_multi_label_loss=False):
         super().__init__()
 

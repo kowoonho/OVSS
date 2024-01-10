@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument(
         '--cfg',
         type=str,
-        required=True,
+        default="/workspace/Code/OVSS/configs/group_vit_gcc_yfcc_30e.yml",
         help='path to config file',
     )
     parser.add_argument(
@@ -64,7 +64,7 @@ def parse_args():
         nargs='+')
 
     # distributed training
-    parser.add_argument('--local_rank', type=int, required=True, help='local rank for DistributedDataParallel')
+    parser.add_argument('--local_rank', type=int, default=1, help='local rank for DistributedDataParallel')
 
     args = parser.parse_args()
 
@@ -80,7 +80,7 @@ def inference(cfg):
     logger.info(f'Creating model:{cfg.model.type}/{cfg.model_name}')
     model = build_model(cfg.model)
     model.cuda()
-    logger.info(str(model))
+    # logger.info(str(model))
 
     if cfg.train.amp_opt_level != 'O0':
         model = amp.initialize(model, None, opt_level=cfg.train.amp_opt_level)
@@ -126,6 +126,8 @@ def vis_seg(config, data_loader, model, vis_modes):
     for batch_indices, data in zip(loader_indices, data_loader):
         with torch.no_grad():
             result = mmddp_model(return_loss=False, **data)
+            print(result[0].shape)
+            exit()
         img_tensor = data['img'][0]
         img_metas = data['img_metas'][0].data[0]
         imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
@@ -181,7 +183,7 @@ def main():
         logger.info(f'Full config saved to {path}')
 
     # print config
-    logger.info(OmegaConf.to_yaml(cfg))
+    # logger.info(OmegaConf.to_yaml(cfg))
 
     inference(cfg)
     dist.barrier()

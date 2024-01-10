@@ -119,7 +119,7 @@ def train(cfg):
     optimizer = build_optimizer(cfg.train, model)
     if cfg.train.amp_opt_level != 'O0':
         model, optimizer = amp.initialize(model, optimizer, opt_level=cfg.train.amp_opt_level)
-    model = MMDistributedDataParallel(model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
+    model = MMDistributedDataParallel(model, device_ids=[torch.cuda.current_device()], broadcast_buffers=False, find_unused_parameters=True)
     model_without_ddp = model.module
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
