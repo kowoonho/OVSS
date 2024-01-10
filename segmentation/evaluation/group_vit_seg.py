@@ -19,10 +19,11 @@ from einops import rearrange
 from mmseg.models import EncoderDecoder
 from PIL import Image
 from utils import get_logger
-from utils.imutils import binary_mask
+from utils.imutils import make_binary_mask
 
 GROUP_PALETTE = np.loadtxt(osp.join(osp.dirname(osp.abspath(__file__)), 'group_palette.txt'), dtype=np.uint8)[:, ::-1]
-
+CLASSES = ('aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
+               'table', 'dog', 'horse', 'motorbike', 'person', 'plant', 'sheep', 'sofa', 'train', 'monitor')
 
 def resize_attn_map(attentions, h, w, align_corners=False):
     """
@@ -261,7 +262,6 @@ class GroupViTSegInference(EncoderDecoder):
         affinity_mask.scatter_add_(
             dim=-1, index=avg_affinity_topk.indices, src=torch.ones_like(avg_affinity_topk.values))
         group_affinity_mat.masked_fill_(~affinity_mask.bool(), float('-inf'))
-        # group_affinity_mat.masked_fill_(bg_indices.bool(), float('-inf'))
         
         group_affinity_mat = F.softmax(group_affinity_mat, dim=-1)
 
@@ -275,6 +275,8 @@ class GroupViTSegInference(EncoderDecoder):
         if self.with_bg:
             bg_thresh = min(self.bg_thresh, group_affinity_mat.max().item())
             pred_logits[0, (onehot_attn_map @ group_affinity_mat).max(dim=-1).values < bg_thresh] = 1
+        
+        
         return pred_logits.unsqueeze(0)
 
     def blend_result(self, img, result, palette=None, out_file=None, opacity=0.5, with_bg=False):
@@ -308,7 +310,7 @@ class GroupViTSegInference(EncoderDecoder):
     def show_result(self, img_show, img_tensor, result, out_file, vis_mode='input'):
         
         assert vis_mode in [
-            'input', 'pred', 'input_pred', 'all_groups', 'first_group', 'final_group', 'input_pred_label', 'fgbg_group'
+            'input', 'pred', 'input_pred', 'all_groups', 'first_group', 'final_group', 'input_pred_label', 'each_group'
         ], vis_mode
 
         if vis_mode == 'input':
@@ -385,10 +387,6 @@ class GroupViTSegInference(EncoderDecoder):
                     attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
                 group_result = attn_map.argmax(dim=1).cpu().numpy()
                 
-                # binary_masks = binary_mask(group_result[0])
-                # for i in range(binary_masks.shape[0]):
-                #     mmcv.imwrite(binary_masks[i] * 255.0, f"/workspace/Dataset/output/test/test{i}.png")
-                # exit()
                 if vis_mode == 'all_groups':
                     layer_out_file = out_file.replace(
                         osp.splitext(out_file)[-1], f'_layer{layer_idx}{osp.splitext(out_file)[-1]}')
@@ -400,52 +398,40 @@ class GroupViTSegInference(EncoderDecoder):
                     palette=GROUP_PALETTE[sum(num_groups[:layer_idx]):sum(num_groups[:layer_idx + 1])],
                     out_file=layer_out_file,
                     opacity=0.5)
-        elif vis_mode == 'fgbg_group':
-            fgbg_attn_map_list = self.get_attn_maps(img_tensor, fgbg=True)
-            assert len(fgbg_attn_map_list) in [1, 2]
+        elif vis_mode == 'each_group':
+            attn_map = self.get_attn_maps(img_tensor)[-1]
+            
+            group_affinity_score = self.get_affinity_score(img_tensor, attn_map)
             
             attn_map = rearrange(attn_map, 'b h w g -> b g h w')
             attn_map = F.interpolate(
-                    attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
+                attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
             group_result = attn_map.argmax(dim=1).cpu().numpy()
-            self.blend_result(
-                img=img_show,
-                result=group_result,
-                out_file=layer_out_file,
-                opacity=0.5)
+            
+            binary_masks = make_binary_mask(group_result[0])
+            labels = np.unique(group_result[0])
+            
+            for i, g_label in enumerate(labels):
+                
+                binary_mask = binary_masks[i][np.newaxis, :, :]
+                
+                max_score, max_index = torch.max(group_affinity_score[g_label], 0)
+                if max_score > 0.5:
+                    class_name = CLASSES[int(max_index.item())]
+                    max_score_rounded = torch.round(max_score * 100)
+                    out_name = out_file[:-4] + f'_{g_label}_{class_name}_{int(max_score_rounded.item())}.jpg'
+                    self.blend_result(img=img_show, result=binary_mask, out_file=out_name, opacity=0.5, with_bg=self.with_bg)
+            
             
         else:
             raise ValueError(f'Unknown vis_type: {vis_mode}')
     
-    def make_grouping_img(self, attn_map, output_path):
-        
-        attn_map = rearrange(attn_map, 'b h w g -> b g h w')
-        # attn_map = F.interpolate(
-        #             attn_map, size=img_show.shape[:2], mode='bilinear', align_corners=self.align_corners)
-        
-        group_result = attn_map.argmax(dim=1).cpu().numpy()
-        
-        binary_masks = binary_mask(group_result[0])
-        labels = np.unique(group_result[0])
-        for i, label in enumerate(labels):
-            mmcv.imwrite(binary_masks[i] * 255.0, osp.join(output_path, "test", f"test{label}.png"))
-            
-        return labels
-            
-        
-    
-    def group_result(self, img, output_path):
-        
+    def get_affinity_score(self, img, attn_map):
         assert img.shape[0] == 1, 'batch size must be 1'
-        
-        attn_map = self.get_attn_maps(img, rescale=True)[-1] # [B, H, W, G]
-        
-        group_labels = self.make_grouping_img(attn_map, output_path)
-        
         attn_map = attn_map[0]
-        
+
         img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
-        
+        # [B, L, C] -> [L, C]
         grouped_img_tokens = img_outs['image_feat'].squeeze(0)
         
         img_avg_feat = img_outs['image_x']
@@ -454,6 +440,7 @@ class GroupViTSegInference(EncoderDecoder):
         grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
         img_avg_feat = F.normalize(img_avg_feat, dim=-1)
         
+           
         # [H, W, G]
         onehot_attn_map = F.one_hot(attn_map.argmax(dim=-1), num_classes=attn_map.shape[-1]).to(dtype=attn_map.dtype)
         num_fg_classes = self.text_embedding.shape[0]
@@ -478,7 +465,15 @@ class GroupViTSegInference(EncoderDecoder):
 
         # TODO: check if necessary
         group_affinity_mat *= pre_group_affinity_mat
-        print(group_affinity_mat[group_labels[1]])
+        
+        return group_affinity_mat
+        
+        
+        
+
+        
+        
+        
         
         
         
