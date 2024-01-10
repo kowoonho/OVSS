@@ -93,7 +93,7 @@ class MultiLabelContrastive(nn.Module):
                  multi_label_loss_weight=1.0,
                  with_fgbg=False,
                  with_multi_label_loss=False,
-                 with_key_token=True):
+                 with_key_token=False):
         super().__init__()
 
         self.img_encoder = MODELS.build(img_encoder)
