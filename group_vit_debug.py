@@ -111,18 +111,26 @@ def vis_seg(config, data_loader, model, vis_modes):
     mmddp_model.eval()
     model = mmddp_model.module
     device = next(model.parameters()).device
+    dataset = data_loader.dataset
 
     loader_indices = data_loader.batch_sampler
-    batch_indices, data = next(zip(loader_indices, data_loader))
-    
-    with torch.no_grad():
-        result = mmddp_model(return_loss=False, **data)
-    img_tensor = data['img'][0]
-    img_metas = data['img_metas'][0].data[0]
-    imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
-    
-    
-    model.group_result(img_tensor.to(device), config.output)
+    # idx = 2
+    # for batch_indices, data in zip(loader_indices, data_loader):
+    #     if batch_indices[0] == idx:
+    #         with torch.no_grad():
+    #             result = mmddp_model(return_loss=False, **data)
+    #         img_tensor = data['img'][0]
+    #         img_metas = data['img_metas'][0].data[0]
+    #         imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
+            
+    #         assert len(imgs) == len(img_metas)
+
+    #         model.group_result(img=imgs[0], img_tensor=img_tensor.to(device), 
+    #                            img_meta=img_metas[0], result=result, out_dir=config.output, batch_idx = batch_indices[0])
+            
+    #         break
+    #     else:
+    #         pass
     
     # for batch_idx, img, img_meta in zip(batch_indices, imgs, img_metas):
     #         h, w, _ = img_meta['img_shape']
@@ -133,6 +141,31 @@ def vis_seg(config, data_loader, model, vis_modes):
     #         for vis_mode in vis_modes:
     #             out_file = osp.join(config.output, 'vis_imgs', vis_mode, f'{batch_idx:04d}.jpg')
     #             model.show_result(img_show, img_tensor.to(device), result, out_file, vis_mode)
+    
+    if dist.get_rank() == 0:
+        prog_bar = mmcv.ProgressBar(len(dataset))
+    for batch_indices, data in zip(loader_indices, data_loader):
+        with torch.no_grad():
+            result = mmddp_model(return_loss=False, **data)
+        img_tensor = data['img'][0]
+        img_metas = data['img_metas'][0].data[0]
+        imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
+        assert len(imgs) == len(img_metas)
+
+        for batch_idx, img, img_meta in zip(batch_indices, imgs, img_metas):
+            h, w, _ = img_meta['img_shape']
+            img_show = img[:h, :w, :]
+
+            ori_h, ori_w = img_meta['ori_shape'][:-1]
+            img_show = mmcv.imresize(img_show, (ori_w, ori_h))
+            for vis_mode in vis_modes:
+                out_file = osp.join(config.output, 'vis_imgs', vis_mode, f'{batch_idx:04d}.jpg')
+                model.show_result(img_show, img_tensor.to(device), result, out_file, vis_mode)
+            if dist.get_rank() == 0:
+                batch_size = len(result) * dist.get_world_size()
+                for _ in range(batch_size):
+                    prog_bar.update()
+
 
 
 def main():

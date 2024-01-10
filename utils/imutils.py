@@ -31,7 +31,7 @@ def HWC_to_CHW(img):
 def CHW_to_HWC(img):
     return np.transpose(img, (1, 2, 0))
 
-def binary_mask(image_label): # (H, W)
+def make_binary_mask(image_label): # (H, W)
     H, W = image_label.shape
     labels = np.unique(image_label)
     binary_masks = np.zeros((len(labels), H, W), dtype=np.uint8)
