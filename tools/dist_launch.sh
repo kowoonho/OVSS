@@ -9,7 +9,7 @@
 #
 # Written by Jiarui Xu
 # -------------------------------------------------------------------------
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=0
 
 SCRIPT=$1
 CONFIG=$2
