@@ -237,7 +237,7 @@ class MultiLabelContrastive(nn.Module):
         anchor_feat = F.normalize(anchor_feat, dim=-1)
         
         dist_per_anchor = anchor_feat @ rearrange(pn_feat, 'b l c -> b c l') # [B, 1, 2]
-        dist_per_pn = pn_feat @ rearrange(pn_feat, 'b l c -> b c l') # [B, 2, 1]
+        dist_per_pn = pn_feat @ rearrange(anchor_feat, 'b l c -> b c l') # [B, 2, 1]
         
         if self.share_temperature:
             logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
@@ -259,23 +259,26 @@ class MultiLabelContrastive(nn.Module):
         logits_per_pn = pn_x @ dist_collect(anchor_x).t()
         logits_per_anchor = anchor_x @ dist_collect(pn_x).t()
         
+
+        
         # get label globally
-        # [B, 1, B, 2, W]
-        labels_per_anchor = F.one_hot(
-            torch.ones(B, 1, B, 2, dtype=torch.long, device=anchor_x.device) * dist.get_rank(),
-            num_classes=dist.get_world_size()).to(anchor_x.dtype)
-        labels_per_anchor *= rearrange(pos_labels_anchor, 'b l1 l2 -> b l1 1 l2 1') * repeat(
-            torch.eye(B, dtype=anchor_x.dtype, device=anchor_x.device), 'b1 b2 -> b1 1 b2 1 1')
-        # [BxL1, WxBxL2]
-        labels_per_anchor = rearrange(labels_per_anchor, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
         # [B, 2, B, 1, W]
         labels_per_pn = F.one_hot(
             torch.ones(B, 2, B, 1, dtype=torch.long, device=pn_x.device) * dist.get_rank(),
             num_classes=dist.get_world_size()).to(pn_x.dtype)
-        labels_per_pn *= rearrange(pos_labels_pn, 'b l2 l1 -> b l2 1 l1 1') * repeat(
-            torch.eye(B, dtype=pn_x.dtype, device=pn_x.device), 'b2 b1 -> b2 1 b1 1 1')
+        
+        labels_per_pn *= rearrange(pos_labels_pn, 'b l1 l2 -> b l1 1 l2 1') * repeat(
+            torch.eye(B, dtype=pn_x.dtype, device=pn_x.device), 'b1 b2 -> b1 1 b2 1 1')
+        # [BxL1, WxBxL2]
+        labels_per_pn = rearrange(labels_per_pn, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
+        # [B, 1, B, 2, W]
+        labels_per_anchor = F.one_hot(
+            torch.ones(B, 1, B, 2, dtype=torch.long, device=anchor_x.device) * dist.get_rank(),
+            num_classes=dist.get_world_size()).to(anchor_x.dtype)
+        labels_per_anchor *= rearrange(pos_labels_anchor, 'b l2 l1 -> b l2 1 l1 1') * repeat(
+            torch.eye(B, dtype=anchor_x.dtype, device=anchor_x.device), 'b2 b1 -> b2 1 b1 1 1')
         # [BxL2, WxBxL1]
-        labels_per_pn = rearrange(labels_per_pn, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
+        labels_per_anchor = rearrange(labels_per_anchor, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
         
         loss_pn = self.soft_cross_entropy(logits_per_pn * logit_scale, labels_per_pn)
         loss_anchor = self.soft_cross_entropy(logits_per_anchor * logit_scale, labels_per_anchor)
@@ -286,12 +289,13 @@ class MultiLabelContrastive(nn.Module):
     
     def multi_label_key_loss(self, key_feat, nonkey_feat, multi_label_text_feat):
         key_loss = 0
-        for i in range(multi_label_text_feat.shape[1]):
+        text_len = multi_label_text_feat.shape[1]
+        for i in range(text_len):
             key_loss += self.key_token_loss(pos_feat=multi_label_text_feat[:,i,:].unsqueeze(1), 
                                             neg_feat=nonkey_feat[:,i,:].unsqueeze(1),
                                             anchor_feat=key_feat[:,i,:].unsqueeze(1))
             
-        return key_loss
+        return key_loss / (text_len*2)
     
     def key_token_selection(self, image_feat, text_multi_label_feat):
         B, G, C = image_feat.shape
