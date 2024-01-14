@@ -295,7 +295,7 @@ class MultiLabelContrastive(nn.Module):
                                             neg_feat=nonkey_feat[:,i,:].unsqueeze(1),
                                             anchor_feat=key_feat[:,i,:].unsqueeze(1))
             
-        return key_loss / (text_len*2)
+        return key_loss / (text_len)
     
     def key_token_selection(self, image_feat, text_multi_label_feat):
         B, G, C = image_feat.shape

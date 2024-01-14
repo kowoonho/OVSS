@@ -9,12 +9,12 @@
 #
 # Written by Jiarui Xu
 # -------------------------------------------------------------------------
-# export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=3
 
 SCRIPT=$1
 CONFIG=$2
 GPUS=$3
-PORT=${PORT:-29800}
+PORT=${PORT:-29600}
 
 
 PYTHONPATH="$(dirname $0)/..":$PYTHONPATH \

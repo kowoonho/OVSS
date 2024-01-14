@@ -160,7 +160,10 @@ def vis_seg(config, data_loader, model, vis_modes):
             img_show = mmcv.imresize(img_show, (ori_w, ori_h))
             for vis_mode in vis_modes:
                 out_file = osp.join(config.output, 'vis_imgs', vis_mode, f'{batch_idx:04d}.jpg')
+                model.group_similarity_score(img_tensor.to(device), out_file)
                 model.show_result(img_show, img_tensor.to(device), result, out_file, vis_mode)
+                if batch_idx == 5:
+                    exit()
             if dist.get_rank() == 0:
                 batch_size = len(result) * dist.get_world_size()
                 for _ in range(batch_size):
