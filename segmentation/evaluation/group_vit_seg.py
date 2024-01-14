@@ -444,6 +444,42 @@ class GroupViTSegInference(EncoderDecoder):
         
         return group_affinity_mat
         
+    def group_similarity_score(self, img, out_file):
+        attn_map = self.get_attn_maps(img, rescale=True)[-1]
+        
+        img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
+        # [B, L, C] -> [L, C]
+        grouped_img_tokens = img_outs['image_feat'].squeeze(0)
+        
+        grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
+        
+        text_tokens = self.text_embedding
+        
+        logit_scale = torch.clamp(self.model.logit_scale.exp(), max=100)
+
+        groups_mat = (grouped_img_tokens @ grouped_img_tokens.T) * logit_scale
+        groups_mat = F.softmax(groups_mat, dim=-1)
+        
+        group_text_mat = self.get_affinity_score(img, attn_map[0])
+        
+        # f = open(out_file[:-3] + "txt", 'w')
+        
+        print()        
+        print("group_group")
+        values, indices = torch.max(groups_mat, dim=1)
+        print(indices)
+        print(values)
+        print(groups_mat)
+        
+        print()
+        print("group_text")
+        values, indices = torch.max(group_text_mat, dim=1)
+        print(indices)
+        print(values)
+        print(group_text_mat)
+        
+        
+        
         
         
 

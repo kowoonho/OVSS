@@ -81,8 +81,8 @@ evaluate:
   eval_only: false
   eval_freq: 1
   task:
-    - cls
-    # - seg
+    # - cls
+    - seg
   cls:
     save_best: true
     template: subset
