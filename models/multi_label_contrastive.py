@@ -93,7 +93,8 @@ class MultiLabelContrastive(nn.Module):
                  multi_label_loss_weight=1.0,
                  with_fgbg=False,
                  with_multi_label_loss=False,
-                 with_key_token=True):
+                 with_key_token=False,
+                 with_hard_negative_sample=False):
         super().__init__()
 
         self.img_encoder = MODELS.build(img_encoder)
@@ -109,6 +110,7 @@ class MultiLabelContrastive(nn.Module):
         self.with_fgbg = with_fgbg
         self.with_multi_label_loss = with_multi_label_loss
         self.with_key_token = with_key_token
+        self.with_hard_negative_sample = with_hard_negative_sample
         
         if proj_num_layers > 0:
             self.img_projector = ProjectMLP(
@@ -141,7 +143,6 @@ class MultiLabelContrastive(nn.Module):
         batch_size = image_x.shape[0]
         # get label globally
         labels = torch.arange(batch_size, dtype=torch.long, device=image_x.device) + batch_size * dist.get_rank()
-        
         # [B, C]
         image_x = F.normalize(image_x, dim=-1)
         text_x = F.normalize(text_x, dim=-1)
@@ -224,6 +225,38 @@ class MultiLabelContrastive(nn.Module):
         loss = 0.5 * (loss_img + loss_text)
         
         return loss
+    
+    def hard_label_loss(self, image_feat, text_multi_label_feat):
+        
+        B, G, C = image_feat.shape
+        hard_label = self.make_hard_label(image_feat, text_multi_label_feat)
+        
+        image_feat = F.normalize(image_feat, dim=-1)
+
+        
+        if self.share_temperature:
+            logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
+        else:
+            logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
+            
+        image_x = rearrange(image_feat, 'b l c -> (b l) c')
+
+        logits_per_groups = image_x @ dist_collect(image_x).t()
+        
+        labels_per_groups = F.one_hot(
+            torch.ones(B, G, B, G, dtype=torch.long, device=image_x.device) * dist.get_rank(),
+            num_classes=dist.get_world_size()).to(image_x.dtype)
+        
+        labels_per_groups *= rearrange(hard_label, 'b l1 l2 -> b l1 1 l2 1') * repeat(
+            torch.eye(B, dtype=image_x.dtype, device=image_x.device), 'b1 b2 -> b1 1 b2 1 1')
+        # [BxL1, WxBxL2]
+        labels_per_groups = rearrange(labels_per_groups, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
+        
+        hard_loss = self.soft_cross_entropy(logits_per_groups * logit_scale, labels_per_groups)
+        
+        return hard_loss
+        
+        
     
     def key_token_loss(self, pos_feat, neg_feat, anchor_feat):
         
@@ -368,6 +401,41 @@ class MultiLabelContrastive(nn.Module):
 
         return outs.as_return()
     
+    def make_hard_label(self, image_feat, text_multi_label_feat):
+        B, G, C = image_feat.shape
+        _, T, _ = text_multi_label_feat.shape
+        
+        image_feat = F.normalize(image_feat, dim=-1)
+        text_feat = F.normalize(text_multi_label_feat, dim=-1)
+        
+        group_token_score = image_feat @ rearrange(image_feat, 'b l c -> b c l')
+        mask = 1 - torch.eye(8, device=image_feat.device)
+        group_token_score = group_token_score * mask
+        
+        text_score = image_feat @ rearrange(text_feat, 'b l c -> b c l')
+        
+        group_final_score = torch.zeros_like(group_token_score)
+        
+        group_one_hot = self.gumbel_softmax(group_token_score, tau=0.5, dim=2)
+        _, group_indices = torch.max(group_one_hot, dim=2)
+        
+        group_final_score.scatter_(1, group_indices.unsqueeze(1), 1)
+        
+        group_final_score = (group_final_score.bool() | group_final_score.transpose(1,2).bool()).float()
+        
+        text_one_hot = self.gumbel_softmax(text_score, tau=0.5, dim=2)
+        _, text_indices = torch.max(text_one_hot, dim=2)
+        
+        
+        text_label = (text_indices.unsqueeze(2) == text_indices.unsqueeze(1)).float()
+        
+        text_label = text_label - torch.eye(8, dtype=text_label.dtype, device=text_label.device)
+        
+        final_label = (group_final_score * text_label) + torch.eye(8, dtype=text_label.dtype, device=text_label.device)
+        
+        return final_label
+        
+
     
     def forward_train(self, image, text):
         image_outs = self.encode_image(image, return_feat = True, as_dict=True, return_fgbg=self.with_fgbg)
@@ -389,17 +457,25 @@ class MultiLabelContrastive(nn.Module):
             losses_dict['multi_label_loss'] = self.multi_label_loss(image_multi_label_x,
                                                                     text_multi_label_x) * self.multi_label_loss_weight
         
-        if self.with_fgbg:
-            text_multi_label_x = text_outs['text_multi_label_x']
-            image_fg = image_outs['image_fg'].unsqueeze(1)
-            image_bg = image_outs['image_bg'].unsqueeze(1)
-            losses_dict['fgbg_loss'] = self.multi_label_fgbg_loss(image_fg, image_bg, text_multi_label_x)
+        # if self.with_fgbg:
+        #     text_multi_label_x = text_outs['text_multi_label_x']
+        #     image_fg = image_outs['image_fg'].unsqueeze(1)
+        #     image_bg = image_outs['image_bg'].unsqueeze(1)
+        #     losses_dict['fgbg_loss'] = self.multi_label_fgbg_loss(image_fg, image_bg, text_multi_label_x)
             
         if self.with_key_token:
             text_multi_label_x = text_outs['text_multi_label_x'] # [B, 3, C]
             
             key_feat, nonkey_feat = self.key_token_selection(image_feat, text_multi_label_x)
             losses_dict['key_loss'] = self.multi_label_key_loss(key_feat, nonkey_feat, text_multi_label_x)
+            
+        if self.with_hard_negative_sample:
+            text_multi_label_x = text_outs['text_multi_label_x'] # [B, 3, C]
+            losses_dict['hard_loss'] = self.hard_label_loss(image_feat, text_multi_label_x)
+            
+            
+            
+            
         return losses_dict
 
     def forward_test(self, image, text):

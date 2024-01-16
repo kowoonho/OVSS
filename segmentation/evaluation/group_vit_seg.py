@@ -20,6 +20,7 @@ from mmseg.models import EncoderDecoder
 from PIL import Image
 from utils import get_logger
 from utils.imutils import make_binary_mask
+import os
 
 GROUP_PALETTE = np.loadtxt(osp.join(osp.dirname(osp.abspath(__file__)), 'group_palette.txt'), dtype=np.uint8)[:, ::-1]
 CLASSES = ('aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
@@ -445,6 +446,11 @@ class GroupViTSegInference(EncoderDecoder):
         return group_affinity_mat
         
     def group_similarity_score(self, img, out_file):
+        out_dir = os.path.dirname(out_file)
+
+        # 디렉토리가 존재하지 않는 경우 생성
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
         attn_map = self.get_attn_maps(img, rescale=True)[-1]
         
         img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
@@ -453,8 +459,6 @@ class GroupViTSegInference(EncoderDecoder):
         
         grouped_img_tokens = F.normalize(grouped_img_tokens, dim=-1)
         
-        text_tokens = self.text_embedding
-        
         logit_scale = torch.clamp(self.model.logit_scale.exp(), max=100)
 
         groups_mat = (grouped_img_tokens @ grouped_img_tokens.T) * logit_scale
@@ -462,21 +466,21 @@ class GroupViTSegInference(EncoderDecoder):
         
         group_text_mat = self.get_affinity_score(img, attn_map[0])
         
-        # f = open(out_file[:-3] + "txt", 'w')
+        f = open(out_file[:-3] + "txt", 'w')
+
         
-        print()        
-        print("group_group")
+        f.write("group by group")
+        groups_mat.fill_diagonal_(0.)
         values, indices = torch.max(groups_mat, dim=1)
-        print(indices)
-        print(values)
-        print(groups_mat)
+        f.write(f"\n{indices}")
+        f.write(f"\n{values}\n")
         
-        print()
-        print("group_text")
+        
+        f.write("group by text")
+        # mask = (torch.eye(group_text_mat.shape[0], group_text_mat.shape[1]) * float('-inf')).to(group_text_mat.device)
         values, indices = torch.max(group_text_mat, dim=1)
-        print(indices)
-        print(values)
-        print(group_text_mat)
+        f.write(f"\n{indices}")
+        f.write(f"\n{values}")
         
         
         

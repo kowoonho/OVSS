@@ -162,7 +162,7 @@ def vis_seg(config, data_loader, model, vis_modes):
                 out_file = osp.join(config.output, 'vis_imgs', vis_mode, f'{batch_idx:04d}.jpg')
                 model.group_similarity_score(img_tensor.to(device), out_file)
                 model.show_result(img_show, img_tensor.to(device), result, out_file, vis_mode)
-                if batch_idx == 5:
+                if batch_idx == 30:
                     exit()
             if dist.get_rank() == 0:
                 batch_size = len(result) * dist.get_world_size()
