@@ -1,7 +1,7 @@
 data:
-  batch_size: 64
+  batch_size: 128
   pin_memory: true
-  num_workers: 0
+  num_workers: 2
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000

@@ -9,7 +9,8 @@
 #
 # Written by Jiarui Xu
 # -------------------------------------------------------------------------
-export CUDA_VISIBLE_DEVICES=0
+# export CUDA_VISIBLE_DEVICES=0
+# export OMP_NUM_THREADS=2
 
 SCRIPT=$1
 CONFIG=$2

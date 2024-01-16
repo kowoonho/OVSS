@@ -91,7 +91,6 @@ class MultiLabelContrastive(nn.Module):
                  multi_label=0,
                  share_temperature=False,
                  multi_label_loss_weight=1.0,
-                 with_fgbg=False,
                  with_multi_label_loss=False,
                  with_key_token=False,
                  with_hard_negative_sample=False):
@@ -107,7 +106,6 @@ class MultiLabelContrastive(nn.Module):
 
         self.proj_num_layers = proj_num_layers
         self.multi_label = multi_label
-        self.with_fgbg = with_fgbg
         self.with_multi_label_loss = with_multi_label_loss
         self.with_key_token = with_key_token
         self.with_hard_negative_sample = with_hard_negative_sample
@@ -438,7 +436,7 @@ class MultiLabelContrastive(nn.Module):
 
     
     def forward_train(self, image, text):
-        image_outs = self.encode_image(image, return_feat = True, as_dict=True, return_fgbg=self.with_fgbg)
+        image_outs = self.encode_image(image, return_feat = True, as_dict=True)
         # [B, C]
         image_x = image_outs['image_x'] 
         # [B, G, C]
