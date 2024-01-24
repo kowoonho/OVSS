@@ -24,3 +24,4 @@ model:
   proj_num_layers: 2
   output_dim: 256
   multi_label: ${data.text_aug.multi_label}
+  with_multi_label_loss: True
