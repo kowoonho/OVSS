@@ -31,6 +31,7 @@ import random
 import warnings
 from functools import partial
 
+import json
 import nltk
 import numpy as np
 import torch
@@ -206,24 +207,36 @@ def build_img_transform(is_train, config, with_dc=True):
     return transform
 
 
-def build_text_transform(is_train, config, with_dc=True):
+def build_text_transform(is_train, config, with_dc=True, with_keyword=False):
     local_rank = dist.get_rank() % torch.cuda.device_count() if dist.is_initialized() else 0
-    if config.multi_label and is_train:
-        # only down on local rank 0
-        if local_rank == 0:
-            nltk.download('popular')
-        transform = WordAugTokenizeWrapper(
-            Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len),
-            max_word=config.multi_label,
-            word_type=config.word_type)
+    
+    if not with_keyword:
+    
+        if config.multi_label and is_train:
+            # only down on local rank 0
+            if local_rank == 0:
+                nltk.download('popular')
+            transform = WordAugTokenizeWrapper(
+                Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len),
+                max_word=config.multi_label,
+                word_type=config.word_type)
 
+        else:
+            transform = Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len)
+            
     else:
-        transform = Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len)
-
+        
+        pass
+        
+    
     if with_dc:
         transform = transforms.Compose([transform, ToDataContainer()])
 
     return transform
+
+
+        
+    
 
 
 class Tokenize:
@@ -278,9 +291,23 @@ class WordAugTokenizeWrapper:
         else:
             raise ValueError
         self.templates = templates
-        assert word_type in ['noun', 'noun_phrase']
+        assert word_type in ['noun', 'noun_phrase', 'key_word']
         self.word_type = word_type
 
+    def extract_keyword(total_text, max_word=3):
+        lines = total_text.split('\n')
+        
+        text = lines[0]
+        keyword = json.loads(lines[-1])
+        
+        if max_word < len(keyword):
+            keyword_nouns = [list(item[1].keys())[0] for item in list(keyword.items())[:max_word]]
+        else:
+            keyword_nouns = [list(item)[1].keys()[0] for item in list(keyword.items())]
+            pass
+        
+        return text, keyword_nouns
+    
     def get_tag(self, tokenized, tags):
         if not isinstance(tags, (list, tuple)):
             tags = [tags]
@@ -323,22 +350,32 @@ class WordAugTokenizeWrapper:
     def __call__(self, text):
         assert isinstance(text, str)
         tokenized = nltk.word_tokenize(text)
+        print(text)
         nouns = []
         if len(tokenized) > 0:
             if self.word_type == 'noun':
                 nouns = self.get_tag(tokenized, ['NN', 'NNS', 'NNP', 'VBG', 'VB', 'VBD', 'VBN', 'VBP', 'VBZ'])
             elif self.word_type == 'noun_phrase':
                 nouns = self.get_noun_phrase(tokenized)
+            elif self.word_type == 'key_word':
+                nouns = self.extract_keyword(total_text=text)
             else:
                 raise ValueError('word_type must be noun or noun_phrase')
-
         prompt_texts = []
-        if len(nouns) > 0:
-            select_nouns = np.random.choice(nouns, min(self.max_word, len(nouns)), replace=False)
-            prompt_texts = [np.random.choice(self.templates).format(noun) for noun in select_nouns]
-        if len(prompt_texts) < self.max_word:
-            prompt_texts += [text] * (self.max_word - len(prompt_texts))
+        
+        if self.word_type == 'key_word':
+            if len(nouns) > 0:
+                prompt_texts = [np.random.choice(self.templates).format(noun) for noun in nouns]
+            if len(prompt_texts) < self.max_word:
+                prompt_texts += [text] * (self.max_word - len(prompt_texts))
+        else:
+            if len(nouns) > 0:
+                select_nouns = np.random.choice(nouns, min(self.max_word, len(nouns)), replace=False)
+                prompt_texts = [np.random.choice(self.templates).format(noun) for noun in select_nouns]
+            if len(prompt_texts) < self.max_word:
+                prompt_texts += [text] * (self.max_word - len(prompt_texts))
 
         texts = [text] + prompt_texts
         
+        print(texts)
         return self.tokenize(texts)
