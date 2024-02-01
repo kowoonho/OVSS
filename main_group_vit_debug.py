@@ -234,7 +234,7 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
         batch_size = config.data.batch_size
 
         losses = model(**samples)
-        
+        exit()
         loss, log_vars = parse_losses(losses)
         
         if config.train.accumulation_steps > 1:
