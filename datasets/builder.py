@@ -350,7 +350,6 @@ class WordAugTokenizeWrapper:
     def __call__(self, text):
         assert isinstance(text, str)
         tokenized = nltk.word_tokenize(text)
-        print(text)
         nouns = []
         if len(tokenized) > 0:
             if self.word_type == 'noun':
@@ -362,7 +361,7 @@ class WordAugTokenizeWrapper:
             else:
                 raise ValueError('word_type must be noun or noun_phrase')
         prompt_texts = []
-        
+        print(nouns)
         if self.word_type == 'key_word':
             if len(nouns) > 0:
                 prompt_texts = [np.random.choice(self.templates).format(noun) for noun in nouns]
@@ -377,5 +376,4 @@ class WordAugTokenizeWrapper:
 
         texts = [text] + prompt_texts
         
-        print(texts)
         return self.tokenize(texts)
