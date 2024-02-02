@@ -294,14 +294,14 @@ class WordAugTokenizeWrapper:
         assert word_type in ['noun', 'noun_phrase', 'key_word']
         self.word_type = word_type
 
-    def extract_keyword(total_text, max_word=3):
+    def extract_keyword(self, total_text):
         lines = total_text.split('\n')
         
         text = lines[0]
         keyword = json.loads(lines[-1])
         
-        if max_word < len(keyword):
-            keyword_nouns = [list(item[1].keys())[0] for item in list(keyword.items())[:max_word]]
+        if self.max_word < len(keyword):
+            keyword_nouns = [list(item[1].keys())[0] for item in list(keyword.items())[:self.max_word]]
         else:
             keyword_nouns = [list(item)[1].keys()[0] for item in list(keyword.items())]
             pass
@@ -357,7 +357,7 @@ class WordAugTokenizeWrapper:
             elif self.word_type == 'noun_phrase':
                 nouns = self.get_noun_phrase(tokenized)
             elif self.word_type == 'key_word':
-                nouns = self.extract_keyword(total_text=text)
+                text, nouns = self.extract_keyword(total_text=text)
             else:
                 raise ValueError('word_type must be noun or noun_phrase')
         prompt_texts = []

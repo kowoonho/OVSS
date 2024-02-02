@@ -428,9 +428,7 @@ class MultiLabelContrastive(nn.Module):
         text_label = (text_indices.unsqueeze(2) == text_indices.unsqueeze(1)).float()
         
         text_label = text_label - torch.eye(8, dtype=text_label.dtype, device=text_label.device)
-        
         final_label = (group_final_score * text_label) + torch.eye(8, dtype=text_label.dtype, device=text_label.device)
-        
         return final_label
         
 
