@@ -421,8 +421,6 @@ class MultiLabelContrastive(nn.Module):
         
         group_final_score = (group_final_score.bool() | group_final_score.transpose(1,2).bool()).float()
         
-        print(group_final_score[0])
-        
         text_one_hot = self.gumbel_softmax(text_score, tau=0.5, dim=2)
         _, text_indices = torch.max(text_one_hot, dim=2)
         
@@ -430,9 +428,7 @@ class MultiLabelContrastive(nn.Module):
         text_label = (text_indices.unsqueeze(2) == text_indices.unsqueeze(1)).float()
         
         text_label = text_label - torch.eye(8, dtype=text_label.dtype, device=text_label.device)
-        print(text_label[0])
         final_label = (group_final_score * text_label) + torch.eye(8, dtype=text_label.dtype, device=text_label.device)
-        print(final_label[0])
         return final_label
         
 
