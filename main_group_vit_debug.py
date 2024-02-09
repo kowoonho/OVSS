@@ -237,6 +237,7 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
         exit()
         loss, log_vars = parse_losses(losses)
         
+        
         if config.train.accumulation_steps > 1:
             loss = loss / config.train.accumulation_steps
             if config.train.amp_opt_level != 'O0':

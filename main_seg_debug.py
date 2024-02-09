@@ -99,6 +99,7 @@ def vis_seg(config, data_loader, model, vis_modes):
     model.eval()
 
     if hasattr(model, 'module'):
+        
         model_without_ddp = model.module
     else:
         model_without_ddp = model
