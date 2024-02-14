@@ -338,7 +338,7 @@ class MultiLabelContrastive(nn.Module):
                                             anchor_feat=multi_label_text_feat[:,i,:].unsqueeze(1))
         return key_loss / (text_len)
     
-    def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.5):
+    def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.8):
         B, G, C = image_feat.shape
         _, T, _ = text_multi_label_feat.shape
         
@@ -346,6 +346,8 @@ class MultiLabelContrastive(nn.Module):
         text_feat = F.normalize(text_multi_label_feat, dim=-1)
         
         token_score = image_feat @ rearrange(text_feat, 'b l c -> b c l') # [B, G, T]
+        
+        token_score = F.normalize(token_score, dim=-1)
         
         threshold_mask = token_score >= threshold
         
@@ -520,7 +522,6 @@ class MultiLabelContrastive(nn.Module):
         
         
     def forward_train(self, image, text):
-
         image_outs = self.encode_image(image, return_feat = True, as_dict=True)
         # [B, C]
         image_x = image_outs['image_x'] 

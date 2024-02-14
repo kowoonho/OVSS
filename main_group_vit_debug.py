@@ -90,6 +90,7 @@ def parse_args():
 
 
 def train(cfg):
+    
     if cfg.wandb and dist.get_rank() == 0:
         import wandb
         wandb.init(
@@ -232,7 +233,7 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
     
     for idx, samples in enumerate(data_loader):
         batch_size = config.data.batch_size
-
+        
         losses = model(**samples)
         exit()
         loss, log_vars = parse_losses(losses)
