@@ -338,7 +338,48 @@ class MultiLabelContrastive(nn.Module):
                                             anchor_feat=multi_label_text_feat[:,i,:].unsqueeze(1))
         return key_loss / (text_len)
     
-    def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.8):
+    # def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.8):
+    #     B, G, C = image_feat.shape
+    #     _, T, _ = text_multi_label_feat.shape
+        
+    #     image_feat = F.normalize(image_feat, dim=-1)
+    #     text_feat = F.normalize(text_multi_label_feat, dim=-1)
+        
+    #     token_score = image_feat @ rearrange(text_feat, 'b l c -> b c l') # [B, G, T]
+        
+    #     token_score = F.normalize(token_score, dim=-1)
+        
+    #     token_score = F.softmax(token_score, dim=-1)
+        
+    #     threshold_mask = token_score >= threshold
+        
+    #     _, indices = torch.max(token_score, dim=2)
+        
+    #     _, max_indices = torch.max(token_score, dim=1)
+        
+    #     forced_selection_mask = rearrange(F.one_hot(max_indices, num_classes=G), 'b l g -> b g l')
+        
+    #     one_hot_indices = F.one_hot(indices, num_classes=T)
+        
+    #     final_mask = (one_hot_indices & threshold_mask) | forced_selection_mask
+        
+    #     expanded_one_hot = final_mask.unsqueeze(-1).expand(-1, -1, -1, C)
+    #     expanded_image_feat = image_feat.unsqueeze(2).expand(-1, -1, T, -1)
+        
+    #     key_masked_sum = (expanded_one_hot * expanded_image_feat).sum(dim=1)
+    #     nonkey_masked_sum = ((1-expanded_one_hot) * expanded_image_feat).sum(dim=1)
+        
+    #     key_masked_count = (expanded_one_hot.sum(dim=1)).clamp(min=1)
+    #     nonkey_masked_count = ((1-expanded_one_hot).sum(dim=1)).clamp(min=1)
+        
+        
+    #     key_feat = key_masked_sum / key_masked_count
+        
+    #     nonkey_feat = nonkey_masked_sum / nonkey_masked_count
+        
+    #     return key_feat, nonkey_feat
+    
+    def key_token_selection(self, image_feat, text_multi_label_feat):
         B, G, C = image_feat.shape
         _, T, _ = text_multi_label_feat.shape
         
@@ -349,44 +390,27 @@ class MultiLabelContrastive(nn.Module):
         
         token_score = F.normalize(token_score, dim=-1)
         
-        threshold_mask = token_score >= threshold
+        attention_weight = F.softmax(token_score, dim=-1)
+        inverse_attention_weight = 1 - attention_weight
         
-        _, indices = torch.max(token_score, dim=2)
+        # [B, G, T, C]
+        attention_score = attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
         
-        _, max_indices = torch.max(token_score, dim=1)
+        inverse_attention_score = inverse_attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
         
-        forced_selection_mask = rearrange(F.one_hot(max_indices, num_classes=G), 'b l g -> b g l')
         
-        one_hot_indices = F.one_hot(indices, num_classes=T)
+        key_feat = attention_score.mean(dim=1)
         
-        final_mask = (one_hot_indices & threshold_mask) | forced_selection_mask
-        
-        expanded_one_hot = final_mask.unsqueeze(-1).expand(-1, -1, -1, C)
-        expanded_image_feat = image_feat.unsqueeze(2).expand(-1, -1, T, -1)
-        
-        key_masked_sum = (expanded_one_hot * expanded_image_feat).sum(dim=1)
-        nonkey_masked_sum = ((1-expanded_one_hot) * expanded_image_feat).sum(dim=1)
-        
-        key_masked_count = (expanded_one_hot.sum(dim=1)).clamp(min=1)
-        nonkey_masked_count = ((1-expanded_one_hot).sum(dim=1)).clamp(min=1)
-        
-        key_feat = key_masked_sum / key_masked_count
-        
-        nonkey_feat = nonkey_masked_sum / nonkey_masked_count
+        nonkey_feat = inverse_attention_score.mean(dim=1)
         
         return key_feat, nonkey_feat
         
-        
-    def encode_image(self, image, *, return_feat=False, as_dict=False, return_fgbg=False):
+    def encode_image(self, image, *, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True, return_fgbg=return_fgbg)
+        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         
-        if return_fgbg:
-            outs.append(self.img_projector(img_outs['fg']), 'image_fg')
-            outs.append(self.img_projector(img_outs['bg']), 'image_bg')
-            
         if return_feat:
             outs.append(self.img_projector(img_outs['feat']), 'image_feat')
         return outs.as_return()
