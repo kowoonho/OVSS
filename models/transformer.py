@@ -111,8 +111,9 @@ class TextTransformer(nn.Module):
         
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)]
-        outs.append(x, name='x')
+        text_x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)]
+        outs.append(text_x, name='text_x')
+        outs.append(x, name='text_feat')
         return outs.as_return()
     
 

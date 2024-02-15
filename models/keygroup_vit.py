@@ -573,7 +573,6 @@ class GroupingLayer(nn.Module):
         
         return x, group_token, attn_dict
 
-
 class PatchEmbed(nn.Module):
     """Image to Patch Embedding."""
 
@@ -840,10 +839,14 @@ class KeyGroupViT(nn.Module):
         pos_embed = self.pos_embed
         pos_embed = interpolate_pos_encoding(pos_embed, H, W)
         return pos_embed
+    
+    # def get_keyword_token(self, )
 
-    def forward_features(self, x, *, return_attn=False):
-        B = x.shape[0]
-        x, hw_shape = self.patch_embed(x) # [B, N, C],  N = (H * W) / (P * P) 
+    def forward_features(self, image, text, *, return_attn=False):
+        B = image.shape[0]
+        image_x, hw_shape = self.patch_embed(image) # [B, N, C],  N = (H * W) / (P * P) 
+        
+        
         
         
         x = x + self.get_pos_embed(B, *hw_shape)
@@ -853,7 +856,6 @@ class KeyGroupViT(nn.Module):
         attn_dict_list = []
         for layer in self.layers:
             x, group_token, attn_dict = layer(x, group_token, return_attn=return_attn)
-
             attn_dict_list.append(attn_dict)
 
         x = self.norm(x)
@@ -875,8 +877,8 @@ class KeyGroupViT(nn.Module):
 
         return x
 
-    def forward(self, x, *, return_feat=False, return_attn=False, as_dict=False):
-        x, group_token, attn_dicts = self.forward_features(x, return_attn=return_attn)
+    def forward(self, image, text, *, return_feat=False, return_attn=False, as_dict=False):
+        x, group_token, attn_dicts = self.forward_features(image, text, return_attn=return_attn)
         
         x_feat = x if return_feat else None
         
