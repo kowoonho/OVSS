@@ -416,6 +416,7 @@ class MultiLabelContrastive(nn.Module):
         return outs.as_return()
 
     def encode_text(self, text, *, as_dict=False, max_word=0, key_label=0):
+        
         assert text.ndim in [2, 3], text.ndim
         squeeze_dim = False
         num_text = 1

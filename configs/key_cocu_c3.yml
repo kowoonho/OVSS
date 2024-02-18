@@ -102,7 +102,7 @@ checkpoint:
   save_freq: 1
 
 
-model_name: '' # display name in the logger
+model_name: '' # disnelay name in the logger
 output: ???
 tag: default
 print_freq: 10
