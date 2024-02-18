@@ -98,7 +98,7 @@ class TextTransformer(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    def forward(self, text, *, as_dict=False):
+    def forward(self, text, *, as_dict=True):
         x = self.token_embedding(text)
         
         outs = Result(as_dict=as_dict)

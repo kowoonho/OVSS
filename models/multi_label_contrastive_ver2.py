@@ -14,7 +14,6 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-import itertools
 from sklearn.cluster import KMeans
 
 from einops import rearrange, repeat
@@ -83,7 +82,7 @@ class ProjectMLP(nn.Module):
 
 
 @MODELS.register_module()
-class MultiLabelContrastive(nn.Module):
+class MultiLabelContrastive2(nn.Module):
 
     def __init__(self,
                  img_encoder,
@@ -405,9 +404,9 @@ class MultiLabelContrastive(nn.Module):
         
         return key_feat, nonkey_feat
         
-    def encode_image(self, image, *, return_feat=False, as_dict=False):
+    def encode_image(self, image, text, *, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
+        img_outs = self.img_encoder(image, text, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         
@@ -424,11 +423,12 @@ class MultiLabelContrastive(nn.Module):
             num_text = text.shape[1]
             text = rearrange(text, 'b n l -> (b n) l', n=num_text)
             squeeze_dim = True
-
+        
         outs = Result(as_dict=as_dict)
         # [B, C]
         x = self.text_encoder(text)
-        text_x = self.text_projector(x)
+        
+        text_x = self.text_projector(x['text_x'])
         
         outs.append(text_x, 'text_x')
         if squeeze_dim:
@@ -444,6 +444,14 @@ class MultiLabelContrastive(nn.Module):
             outs.update(text_x=text_x, text_multi_label_x=text_multi_label_x, text_key=text_key)
 
         return outs.as_return()
+    
+    def build_word_embedding(self, text):
+        x = self.text_encoder(text)
+        
+        # [B, 77, C]
+        text_feat = x['text_feat']
+        
+        return text_feat
     
     def make_hard_label(self, image_feat, text_multi_label_feat):
         B, G, C = image_feat.shape
@@ -546,7 +554,9 @@ class MultiLabelContrastive(nn.Module):
         
         
     def forward_train(self, image, text):
-        image_outs = self.encode_image(image, return_feat = True, as_dict=True)
+        text_feat = self.build_word_embedding(text[:,0])
+        
+        image_outs = self.encode_image(image, text_feat, return_feat = True, as_dict=True)
         # [B, C]
         image_x = image_outs['image_x'] 
         

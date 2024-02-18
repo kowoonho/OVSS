@@ -40,7 +40,6 @@ class Mlp(nn.Module):
         x = self.drop(x)
         return x
 
-
 class MixerMlp(Mlp):
 
     def forward(self, x):
@@ -483,7 +482,9 @@ class GroupingLayer(nn.Module):
                  downsample=None,
                  use_checkpoint=False,
                  group_projector=None,
-                 zero_init_group_token=False):
+                 group_len_projector=None,
+                 zero_init_group_token=False,
+                 ):
 
         super().__init__()
         self.dim = dim
@@ -491,10 +492,13 @@ class GroupingLayer(nn.Module):
         self.depth = depth
         self.use_checkpoint = use_checkpoint
         self.num_group_token = num_group_token
+        self.group_len_projector = group_len_projector
+        
         if num_group_token > 0:
             self.group_token = nn.Parameter(torch.zeros(1, num_group_token, dim))
             if not zero_init_group_token:
                 trunc_normal_(self.group_token, std=.02)
+                
         else:
             self.group_token = None
 
@@ -542,7 +546,7 @@ class GroupingLayer(nn.Module):
             return x
         return torch.cat([x, group_token], dim=1)
 
-    def forward(self, x, prev_group_token=None, return_attn=False):
+    def forward(self, x, prev_group_token=None, keyword_emb=None, return_attn=False):
         """
         Args:
             x (torch.Tensor): image tokens, [B, L, C]
@@ -550,12 +554,19 @@ class GroupingLayer(nn.Module):
             return_attn (bool): whether to return attention maps
         """
         
-        if self.with_group_token:
-            group_token = self.group_token.expand(x.size(0), -1, -1)
+        if self.num_group_token > 0:
+            if self.group_len_projector:
+                group_token = self.group_len_projector(keyword_emb)  
+                
+            else:
+                group_token = self.group_token.expand(x.size(0), -1, -1)
+                
             if self.group_projector is not None:
                 group_token = group_token + self.group_projector(prev_group_token)
+            
         else:
             group_token = None
+            
 
         B, L, C = x.shape
         cat_x = self.concat_x(x, group_token)
@@ -660,10 +671,12 @@ class KeyGroupViT(nn.Module):
                  drop_rate=0.,
                  attn_drop_rate=0.,
                  drop_path_rate=0.1,
+                 topk_word=8,
                  patch_norm=True,
                  use_checkpoint=False,
                  pos_embed_type='simple',
-                 freeze_patch_embed=False):
+                 freeze_patch_embed=False,
+                 keyword_group=True):
         super().__init__()
         assert patch_size in [4, 8, 16]
         self.num_classes = num_classes
@@ -683,6 +696,9 @@ class KeyGroupViT(nn.Module):
         self.num_group_tokens = num_group_tokens
         self.num_output_groups = num_output_groups
         self.pos_embed_type = pos_embed_type
+        
+        self.topk_word = topk_word
+        
         assert pos_embed_type in ['simple', 'fourier']
 
         norm_layer = nn.LayerNorm
@@ -726,7 +742,10 @@ class KeyGroupViT(nn.Module):
         for i_layer in range(self.num_layers):
 
             dim = int(embed_dim * embed_factors[i_layer])
+            
+            group_len_projector = None
             downsample = None
+            
             if i_layer < self.num_layers - 1:
                 out_dim = embed_dim * embed_factors[i_layer + 1]
                 downsample = GroupingBlock(
@@ -739,6 +758,12 @@ class KeyGroupViT(nn.Module):
                     hard=hard_assignment,
                     gumbel=hard_assignment)
                 num_output_token = num_output_groups[i_layer]
+                
+                if keyword_group == True:
+                    group_len_projector = nn.Sequential(norm_layer(dim),
+                                                        MixerMlp(topk_word, dim//2, num_group_tokens[i_layer]))
+                else:
+                    group_len_projector = None
 
             if i_layer > 0 and num_group_tokens[i_layer] > 0:
                 prev_dim = int(embed_dim * embed_factors[i_layer - 1])
@@ -751,6 +776,9 @@ class KeyGroupViT(nn.Module):
                                                     nn.Linear(prev_dim, dim, bias=False))
             else:
                 group_projector = None
+                
+            
+
             layer = GroupingLayer(
                 dim=dim,
                 num_input_token=num_input_token,
@@ -767,6 +795,7 @@ class KeyGroupViT(nn.Module):
                 downsample=downsample,
                 use_checkpoint=use_checkpoint,
                 group_projector=group_projector,
+                group_len_projector=group_len_projector,
                 # only zero init group token if we have a projection
                 zero_init_group_token=group_projector is not None)
             self.layers.append(layer)
@@ -840,22 +869,33 @@ class KeyGroupViT(nn.Module):
         pos_embed = interpolate_pos_encoding(pos_embed, H, W)
         return pos_embed
     
-    # def get_keyword_token(self, )
-
+    def get_keyword_token(self, patch_emb, word_emb):
+        B, P, C = patch_emb.shape
+        
+        patch_emb = F.normalize(patch_emb, dim=-1)
+        word_emb = F.normalize(word_emb, dim=-1)
+        
+        sim_mat = patch_emb @ rearrange(word_emb, 'b t l -> b l t')
+        
+        _, top_indices = torch.topk(sim_mat.mean(dim=1), self.topk_word, dim=1)
+        
+        top_word_emb = torch.gather(word_emb, 1, top_indices.unsqueeze(-1).expand(-1, -1, C))
+        
+        return top_word_emb
+        
     def forward_features(self, image, text, *, return_attn=False):
         B = image.shape[0]
-        image_x, hw_shape = self.patch_embed(image) # [B, N, C],  N = (H * W) / (P * P) 
-        
-        
-        
+        x, hw_shape = self.patch_embed(image) # [B, N, C],  N = (H * W) / (P * P) 
         
         x = x + self.get_pos_embed(B, *hw_shape)
         x = self.pos_drop(x)
         
+        keyword_emb = self.get_keyword_token(x, text)
+        
         group_token = None
         attn_dict_list = []
         for layer in self.layers:
-            x, group_token, attn_dict = layer(x, group_token, return_attn=return_attn)
+            x, group_token, attn_dict = layer(x, group_token, keyword_emb, return_attn=return_attn)
             attn_dict_list.append(attn_dict)
 
         x = self.norm(x)
