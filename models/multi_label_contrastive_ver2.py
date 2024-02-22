@@ -14,7 +14,6 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-import itertools
 from sklearn.cluster import KMeans
 
 from einops import rearrange, repeat
@@ -83,7 +82,7 @@ class ProjectMLP(nn.Module):
 
 
 @MODELS.register_module()
-class MultiLabelContrastive(nn.Module):
+class MultiLabelContrastive2(nn.Module):
 
     def __init__(self,
                  img_encoder,
@@ -338,48 +337,7 @@ class MultiLabelContrastive(nn.Module):
                                             anchor_feat=multi_label_text_feat[:,i,:].unsqueeze(1))
         return key_loss / (text_len)
     
-    def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.8):
-        B, G, C = image_feat.shape
-        _, T, _ = text_multi_label_feat.shape
-        
-        image_feat = F.normalize(image_feat, dim=-1)
-        text_feat = F.normalize(text_multi_label_feat, dim=-1)
-        
-        token_score = image_feat @ rearrange(text_feat, 'b l c -> b c l') # [B, G, T]
-        
-        token_score = F.normalize(token_score, dim=-1)
-        
-        token_score = F.softmax(token_score, dim=-1)
-        
-        threshold_mask = token_score >= threshold
-        
-        _, indices = torch.max(token_score, dim=2)
-        
-        _, max_indices = torch.max(token_score, dim=1)
-        
-        forced_selection_mask = rearrange(F.one_hot(max_indices, num_classes=G), 'b l g -> b g l')
-        
-        one_hot_indices = F.one_hot(indices, num_classes=T)
-        
-        final_mask = (one_hot_indices & threshold_mask) | forced_selection_mask
-        
-        expanded_one_hot = final_mask.unsqueeze(-1).expand(-1, -1, -1, C)
-        expanded_image_feat = image_feat.unsqueeze(2).expand(-1, -1, T, -1)
-        
-        key_masked_sum = (expanded_one_hot * expanded_image_feat).sum(dim=1)
-        nonkey_masked_sum = ((1-expanded_one_hot) * expanded_image_feat).sum(dim=1)
-        
-        key_masked_count = (expanded_one_hot.sum(dim=1)).clamp(min=1)
-        nonkey_masked_count = ((1-expanded_one_hot).sum(dim=1)).clamp(min=1)
-        
-        
-        key_feat = key_masked_sum / key_masked_count
-        
-        nonkey_feat = nonkey_masked_sum / nonkey_masked_count
-        
-        return key_feat, nonkey_feat
-    
-    # def key_token_selection(self, image_feat, text_multi_label_feat):
+    # def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.8):
     #     B, G, C = image_feat.shape
     #     _, T, _ = text_multi_label_feat.shape
         
@@ -390,24 +348,65 @@ class MultiLabelContrastive(nn.Module):
         
     #     token_score = F.normalize(token_score, dim=-1)
         
-    #     attention_weight = F.softmax(token_score, dim=-1)
-    #     inverse_attention_weight = 1 - attention_weight
+    #     token_score = F.softmax(token_score, dim=-1)
         
-    #     # [B, G, T, C]
-    #     attention_score = attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
+    #     threshold_mask = token_score >= threshold
         
-    #     inverse_attention_score = inverse_attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
+    #     _, indices = torch.max(token_score, dim=2)
+        
+    #     _, max_indices = torch.max(token_score, dim=1)
+        
+    #     forced_selection_mask = rearrange(F.one_hot(max_indices, num_classes=G), 'b l g -> b g l')
+        
+    #     one_hot_indices = F.one_hot(indices, num_classes=T)
+        
+    #     final_mask = (one_hot_indices & threshold_mask) | forced_selection_mask
+        
+    #     expanded_one_hot = final_mask.unsqueeze(-1).expand(-1, -1, -1, C)
+    #     expanded_image_feat = image_feat.unsqueeze(2).expand(-1, -1, T, -1)
+        
+    #     key_masked_sum = (expanded_one_hot * expanded_image_feat).sum(dim=1)
+    #     nonkey_masked_sum = ((1-expanded_one_hot) * expanded_image_feat).sum(dim=1)
+        
+    #     key_masked_count = (expanded_one_hot.sum(dim=1)).clamp(min=1)
+    #     nonkey_masked_count = ((1-expanded_one_hot).sum(dim=1)).clamp(min=1)
         
         
-    #     key_feat = attention_score.mean(dim=1)
+    #     key_feat = key_masked_sum / key_masked_count
         
-    #     nonkey_feat = inverse_attention_score.mean(dim=1)
+    #     nonkey_feat = nonkey_masked_sum / nonkey_masked_count
         
     #     return key_feat, nonkey_feat
+    
+    def key_token_selection(self, image_feat, text_multi_label_feat):
+        B, G, C = image_feat.shape
+        _, T, _ = text_multi_label_feat.shape
         
-    def encode_image(self, image, *, return_feat=False, as_dict=False):
+        image_feat = F.normalize(image_feat, dim=-1)
+        text_feat = F.normalize(text_multi_label_feat, dim=-1)
+        
+        token_score = image_feat @ rearrange(text_feat, 'b l c -> b c l') # [B, G, T]
+        
+        token_score = F.normalize(token_score, dim=-1)
+        
+        attention_weight = F.softmax(token_score, dim=-1)
+        inverse_attention_weight = 1 - attention_weight
+        
+        # [B, G, T, C]
+        attention_score = attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
+        
+        inverse_attention_score = inverse_attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
+        
+        
+        key_feat = attention_score.mean(dim=1)
+        
+        nonkey_feat = inverse_attention_score.mean(dim=1)
+        
+        return key_feat, nonkey_feat
+        
+    def encode_image(self, image, *, text=None, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
+        img_outs = self.img_encoder(image, text=text, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         
@@ -416,7 +415,6 @@ class MultiLabelContrastive(nn.Module):
         return outs.as_return()
 
     def encode_text(self, text, *, as_dict=False, max_word=0, key_label=0):
-        
         assert text.ndim in [2, 3], text.ndim
         squeeze_dim = False
         num_text = 1
@@ -425,12 +423,13 @@ class MultiLabelContrastive(nn.Module):
             num_text = text.shape[1]
             text = rearrange(text, 'b n l -> (b n) l', n=num_text)
             squeeze_dim = True
-
+        
         outs = Result(as_dict=as_dict)
         # [B, C]
         x = self.text_encoder(text)
+        
         text_x = self.text_projector(x['text_x'])
-            
+        
         outs.append(text_x, 'text_x')
         if squeeze_dim:
             text_x = rearrange(text_x, '(b n) c -> b n c', n=num_text)
@@ -445,6 +444,14 @@ class MultiLabelContrastive(nn.Module):
             outs.update(text_x=text_x, text_multi_label_x=text_multi_label_x, text_key=text_key)
 
         return outs.as_return()
+    
+    def build_word_embedding(self, text):
+        x = self.text_encoder(text)
+        
+        # [B, 77, C]
+        text_feat = x['text_feat']
+        
+        return text_feat
     
     def make_hard_label(self, image_feat, text_multi_label_feat):
         B, G, C = image_feat.shape
@@ -547,7 +554,9 @@ class MultiLabelContrastive(nn.Module):
         
         
     def forward_train(self, image, text):
-        image_outs = self.encode_image(image, return_feat = True, as_dict=True)
+        text_feat = self.build_word_embedding(text[:,0])
+        
+        image_outs = self.encode_image(image, text=text_feat, return_feat = True, as_dict=True)
         # [B, C]
         image_x = image_outs['image_x'] 
         

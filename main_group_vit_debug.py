@@ -90,10 +90,11 @@ def parse_args():
 
 
 def train(cfg):
+    
     if cfg.wandb and dist.get_rank() == 0:
         import wandb
         wandb.init(
-            project='group_vit',
+            project='group_vit_debug',
             name=osp.join(cfg.model_name, cfg.tag),
             dir=cfg.output,
             config=OmegaConf.to_container(cfg, resolve=True),
@@ -232,10 +233,11 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
     
     for idx, samples in enumerate(data_loader):
         batch_size = config.data.batch_size
-
-        losses = model(**samples)
         
+        losses = model(**samples)
+        exit()
         loss, log_vars = parse_losses(losses)
+        
         
         if config.train.accumulation_steps > 1:
             loss = loss / config.train.accumulation_steps
@@ -416,7 +418,7 @@ def validate_seg(config, data_loader, model):
 
 def main():
     args = parse_args()
-    cfg = get_config(args)
+    cfg = get_config(args, mode='debug')
     
     if cfg.train.amp_opt_level != 'O0':
         assert amp is not None, 'amp not installed!'

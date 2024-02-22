@@ -98,7 +98,7 @@ class TextTransformer(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    def forward(self, text, *, as_dict=False):
+    def forward(self, text, *, as_dict=True):
         x = self.token_embedding(text)
         
         outs = Result(as_dict=as_dict)
@@ -109,67 +109,11 @@ class TextTransformer(nn.Module):
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
         
-        
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)]
-        outs.append(x, name='x')
-
+        text_x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)]
+        outs.append(text_x, name='text_x')
+        # outs.append(x, name='text_feat')
         return outs.as_return()
     
 
-class TextGroupingTransformer(nn.Module):
-    def __init__(
-        self,
-        context_length: int,
-        width: int,
-        layers: int,
-        vocab_size,
-        use_checkpoint=False,
-    ):
-
-        super().__init__()
-        heads = width // 64
-        self.context_length = context_length
-        self.width = width
-        self.transformer = Transformer(
-            width=width,
-            layers=layers,
-            heads=heads,
-            attn_mask=self.build_attention_mask(),
-            use_checkpoint=use_checkpoint)
-
-        self.positional_embedding = nn.Parameter(torch.empty(self.context_length, width))
-        self.ln_final = nn.LayerNorm(width)
-        self.token_embedding = nn.Embedding(vocab_size, width)
-        nn.init.normal_(self.token_embedding.weight, std=0.02)
-
-        # initialization
-        nn.init.normal_(self.positional_embedding, std=0.01)
-
-    def build_attention_mask(self):
-        # lazily create causal attention mask, with full attention between the vision tokens
-        # pytorch uses additive attention mask; fill with -inf
-        mask = torch.empty(self.context_length, self.context_length)
-        mask.fill_(float('-inf'))
-        mask.triu_(1)  # zero out the lower diagonal
-        return mask
-
-    def forward(self, text, *, as_dict=False):
-        x = self.token_embedding(text)
-        
-        outs = Result(as_dict=as_dict)
-        
-        x = x + self.positional_embedding
-        x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x)
-        x = x.permute(1, 0, 2)  # LND -> NLD
-        x = self.ln_final(x)
-        
-        
-        # x.shape = [batch_size, n_ctx, transformer.width]
-        # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)]
-        outs.append(x, name='x')
-
-        return outs.as_return()

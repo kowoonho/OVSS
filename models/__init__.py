@@ -10,7 +10,9 @@
 
 from .builder import build_model
 from .group_vit import GroupViT
+from .keygroup_vit import KeyGroupViT
 from .multi_label_contrastive import MultiLabelContrastive
 from .transformer import TextTransformer
+from .multi_label_contrastive_ver2 import MultiLabelContrastive2
 
-__all__ = ['build_model', 'MultiLabelContrastive', 'GroupViT', 'TextTransformer']
+__all__ = ['build_model', 'MultiLabelContrastive', 'GroupViT', 'TextTransformer', 'KeyGroupViT']

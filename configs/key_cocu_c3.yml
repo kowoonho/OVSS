@@ -1,7 +1,7 @@
 data:
-  batch_size: 16
+  batch_size: 128
   pin_memory: true
-  num_workers: 1
+  num_workers: 12
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -11,14 +11,15 @@ data:
     meta:
       gcc3m:
         type: img_txt_pair
-        path: ${data.dataset.DATA}/local_data/gcc3m_shards
-        prefix: gcc-train-{000000..000331}.tar
+        path: ${data.dataset.DATA}/local_data/clip-vit-b-16_8_c3_shards
+        prefix: c3-{000000..000269}.tar
         length: 2891445
       gcc12m:
         type: img_txt_pair
-        path: ${data.dataset.DATA}/local_data/gcc12m_shards
+        path: ${data.dataset.DATA}/local_data/clip-vit-b-16_8_c12_shards
         prefix: gcc-conceptual-12m-{000000..001242}.tar
         length: 11156203
+      
       # yfcc14m:
       #   type: img_txt_pair
       #   path: /workspace/Dataset/local_data/yfcc14m_shards
@@ -54,7 +55,8 @@ data:
   text_aug:
     max_seq_len: 77
     multi_label: 0
-    word_type: 'noun'
+    key_label: 3
+    word_type: ['key_word', 'noun'] # list
 
 train:
   start_epoch: 0
@@ -100,7 +102,7 @@ checkpoint:
   save_freq: 1
 
 
-model_name: '' # display name in the logger
+model_name: '' # disnelay name in the logger
 output: ???
 tag: default
 print_freq: 10
@@ -108,3 +110,32 @@ seed: 0
 wandb: true
 local_rank: ???
 vis: []
+
+model:
+  type: MultiLabelContrastive
+  img_encoder:
+    type: GroupViT
+    embed_dim: 384
+    num_heads: [6, 6, 6]
+    depths: [6, 3, 3]
+    num_group_tokens: [64, 8, 0]
+    num_output_groups: [64, 8]
+    drop_rate: 0.0
+    drop_path_rate: 0.1
+  text_encoder:
+    type: TextTransformer
+    context_length: 77
+    width: 256
+    layers: 12
+    vocab_size: 49408
+  clip_encoder: 'ViT-B/32'
+  contrast_temperature: 0.07
+  proj_num_layers: 2
+  output_dim: 256
+  multi_label: ${data.text_aug.multi_label}
+  key_label: ${data.text_aug.key_label}
+  with_multi_label_loss: True
+  with_key_token: True
+  with_hard_negative_sample: False
+  with_key_label: False
+  K: 16

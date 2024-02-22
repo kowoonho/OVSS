@@ -31,6 +31,7 @@ import random
 import warnings
 from functools import partial
 
+import json
 import nltk
 import numpy as np
 import torch
@@ -206,24 +207,37 @@ def build_img_transform(is_train, config, with_dc=True):
     return transform
 
 
-def build_text_transform(is_train, config, with_dc=True):
+def build_text_transform(is_train, config, with_dc=True, with_keyword=False):
     local_rank = dist.get_rank() % torch.cuda.device_count() if dist.is_initialized() else 0
-    if config.multi_label and is_train:
-        # only down on local rank 0
-        if local_rank == 0:
-            nltk.download('popular')
-        transform = WordAugTokenizeWrapper(
-            Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len),
-            max_word=config.multi_label,
-            word_type=config.word_type)
+    
+    if not with_keyword:
+    
+        if (config.multi_label or config.key_label) and is_train:
+            # only down on local rank 0
+            if local_rank == 0:
+                nltk.download('popular')
+            transform = WordAugTokenizeWrapper(
+                Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len),
+                max_word=config.multi_label,
+                max_key=config.key_label,
+                word_type=config.word_type)
 
+        else:
+            transform = Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len)
+            
     else:
-        transform = Tokenize(SimpleTokenizer(), max_seq_len=config.max_seq_len)
-
+        
+        pass
+        
+    
     if with_dc:
         transform = transforms.Compose([transform, ToDataContainer()])
 
     return transform
+
+
+        
+    
 
 
 class Tokenize:
@@ -261,9 +275,10 @@ class Tokenize:
 
 class WordAugTokenizeWrapper:
 
-    def __init__(self, tokenize, max_word=3, template_set='full', word_type='noun'):
+    def __init__(self, tokenize, max_word=3, max_key=3, template_set='full', word_type=[]):
         self.tokenize = tokenize
         self.max_word = max_word
+        self.max_key = max_key
         from .imagenet_template import (full_imagenet_templates, sub_imagenet_template, simple_imagenet_template,
                                         identity_template)
         assert template_set in ['full', 'subset', 'simple', 'identity']
@@ -278,9 +293,23 @@ class WordAugTokenizeWrapper:
         else:
             raise ValueError
         self.templates = templates
-        assert word_type in ['noun', 'noun_phrase']
+        # assert word_type in ['noun', 'noun_phrase', 'key_word']
         self.word_type = word_type
 
+    def extract_keyword(self, total_text):
+        lines = total_text.split('\n')
+        
+        text = lines[0]
+        keyword = json.loads(lines[-1])
+        
+        if self.max_key < len(keyword):
+            keyword_nouns = [list(item[1].keys())[0] for item in list(keyword.items())[:self.max_key]]
+        else:
+            keyword_nouns = [list(item[1].keys())[0] for item in list(keyword.items())]
+            pass
+        
+        return text, keyword_nouns
+    
     def get_tag(self, tokenized, tags):
         if not isinstance(tags, (list, tuple)):
             tags = [tags]
@@ -322,23 +351,35 @@ class WordAugTokenizeWrapper:
 
     def __call__(self, text):
         assert isinstance(text, str)
+        if 'key_word' in self.word_type:
+            text, keywords = self.extract_keyword(total_text = text)    
         tokenized = nltk.word_tokenize(text)
         nouns = []
         if len(tokenized) > 0:
-            if self.word_type == 'noun':
+            if 'noun' in self.word_type:
                 nouns = self.get_tag(tokenized, ['NN', 'NNS', 'NNP', 'VBG', 'VB', 'VBD', 'VBN', 'VBP', 'VBZ'])
-            elif self.word_type == 'noun_phrase':
+            elif 'noun_phrase' in self.word_type:
                 nouns = self.get_noun_phrase(tokenized)
+            # elif self.word_type == 'key_word':
+            #     text, nouns = self.extract_keyword(total_text=text)
             else:
                 raise ValueError('word_type must be noun or noun_phrase')
-
         prompt_texts = []
+        keyword_texts = []
+        
+        
         if len(nouns) > 0:
             select_nouns = np.random.choice(nouns, min(self.max_word, len(nouns)), replace=False)
-            prompt_texts = [np.random.choice(self.templates).format(noun) for noun in select_nouns]
+            prompt_texts += [np.random.choice(self.templates).format(noun) for noun in select_nouns]
         if len(prompt_texts) < self.max_word:
             prompt_texts += [text] * (self.max_word - len(prompt_texts))
+            
+        if 'key_word' in self.word_type:
+            if len(keywords) > 0:
+                keyword_texts += [np.random.choice(self.templates).format(noun) for noun in keywords]
+            if len(keyword_texts) < self.max_key:
+                keyword_texts += [text] * (self.max_key - len(keyword_texts))
 
-        texts = [text] + prompt_texts
+        texts = [text] + prompt_texts + keyword_texts
         
         return self.tokenize(texts)

@@ -40,7 +40,6 @@ class Mlp(nn.Module):
         x = self.drop(x)
         return x
 
-
 class MixerMlp(Mlp):
 
     def forward(self, x):
@@ -483,7 +482,9 @@ class GroupingLayer(nn.Module):
                  downsample=None,
                  use_checkpoint=False,
                  group_projector=None,
-                 zero_init_group_token=False):
+                 group_len_projector=None,
+                 zero_init_group_token=False,
+                 ):
 
         super().__init__()
         self.dim = dim
@@ -491,10 +492,13 @@ class GroupingLayer(nn.Module):
         self.depth = depth
         self.use_checkpoint = use_checkpoint
         self.num_group_token = num_group_token
+        self.group_len_projector = group_len_projector
+        
         if num_group_token > 0:
             self.group_token = nn.Parameter(torch.zeros(1, num_group_token, dim))
             if not zero_init_group_token:
                 trunc_normal_(self.group_token, std=.02)
+                
         else:
             self.group_token = None
 
@@ -542,7 +546,7 @@ class GroupingLayer(nn.Module):
             return x
         return torch.cat([x, group_token], dim=1)
 
-    def forward(self, x, prev_group_token=None, return_attn=False):
+    def forward(self, x, prev_group_token=None, keyword_emb=None, return_attn=False):
         """
         Args:
             x (torch.Tensor): image tokens, [B, L, C]
@@ -550,12 +554,19 @@ class GroupingLayer(nn.Module):
             return_attn (bool): whether to return attention maps
         """
         
-        if self.with_group_token:
-            group_token = self.group_token.expand(x.size(0), -1, -1)
+        if self.num_group_token > 0:
+            if self.group_len_projector != None and keyword_emb != None:
+                group_token = self.group_len_projector(keyword_emb)  
+                
+            else:
+                group_token = self.group_token.expand(x.size(0), -1, -1)
+                
             if self.group_projector is not None:
                 group_token = group_token + self.group_projector(prev_group_token)
+            
         else:
             group_token = None
+            
 
         B, L, C = x.shape
         cat_x = self.concat_x(x, group_token)
@@ -572,7 +583,6 @@ class GroupingLayer(nn.Module):
             x, attn_dict = self.downsample(x, group_token, return_attn=return_attn)
         
         return x, group_token, attn_dict
-
 
 class PatchEmbed(nn.Module):
     """Image to Patch Embedding."""
@@ -612,128 +622,9 @@ class PatchEmbed(nn.Module):
             x = self.norm(x)
         return x, hw_shape
 
-class Group_fgbg(nn.Module):
-    def __init__(self,
-                 dim,
-                 depth,
-                 num_group_tokens,
-                 num_heads = 6,
-                 mlp_ratio = (0.5, 4.0),
-                 attn_mlp_ratio=4.0,
-                 qkv_bias=True,
-                 norm_layer=nn.LayerNorm,
-                 hard=True,
-                 gumbel=True,
-                 sum_assign=False,
-                 assign_eps=1.,
-                 gumbel_tau=1.,
-                 qk_scale = None,
-                 drop=0.,
-                 attn_drop=0.,
-                 drop_path_rate=0.1):
-        super().__init__()
-        self.dim = dim
-        self.bg_token = nn.Parameter(torch.zeros(1, 1, dim))
-        self.fg_token = nn.Parameter(torch.zeros(1, 1, dim))
-        
-        trunc_normal_(self.fg_token, std=.02)
-        trunc_normal_(self.bg_token, std=.02)
-        
-        num_output_group = num_group_tokens
-        out_dim = dim
-        
-        tokens_dim, channels_dim = [int(x * dim) for x in to_2tuple(mlp_ratio)]
-        
-        self.norm_layer = norm_layer(dim)
-
-        self.mlp_inter = Mlp(num_group_tokens, tokens_dim, num_output_group)
-        self.mlp_channels = Mlp(dim, channels_dim, out_dim)
-        
-        if out_dim is not None and dim != out_dim:
-            self.reduction = nn.Sequential(norm_layer(dim), nn.Linear(dim, out_dim, bias=False))
-        else:
-            self.reduction = nn.Identity()
-        
-        self.pre_assign_attn = CrossAttnBlock(
-            dim=dim, num_heads=num_heads, mlp_ratio=4, qkv_bias=qkv_bias, norm_layer=norm_layer, post_norm=True)
-        
-        self.assign = AssignAttention(
-            dim=dim,
-            num_heads=1,
-            qkv_bias=True,
-            hard=hard,
-            gumbel=gumbel,
-            gumbel_tau=gumbel_tau,
-            sum_assign=sum_assign,
-            assign_eps=assign_eps)
-        
-        self.depth = depth
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]
-        blocks = []
-        for i in range(depth):
-            blocks.append(
-                AttnBlock(
-                    dim=dim,
-                    num_heads=num_heads,
-                    mlp_ratio=attn_mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    qk_scale=qk_scale,
-                    drop=drop,
-                    attn_drop=attn_drop,
-                    drop_path=dpr[i],
-                    norm_layer=norm_layer))
-        self.blocks = nn.ModuleList(blocks)
-        
-        
-    def concat_x(self, x, y):
-        return torch.cat([x, y], dim = 1)
-    
-    def split_x(self, x):
-        return x[:, :-2], x[:, -2:]
-    
-    def project_token(self, tokens):
-        
-        projected_tokens = self.mlp_inter(tokens.transpose(1, 2)).transpose(1,2)
-        projected_tokens = self.norm_layer(projected_tokens)
-        
-        return projected_tokens
-    
-    def grouping_block(self, x, fgbg_tokens, return_attn=False):
-        fgbg_tokens = self.norm_layer(fgbg_tokens)
-        x = self.norm_layer(x)
-        
-        projected_fgbg_tokens = self.project_token(fgbg_tokens)
-        projected_fgbg_tokens = self.pre_assign_attn(projected_fgbg_tokens, x)
-        
-        new_x, attn_dict = self.assign(projected_fgbg_tokens, x, return_attn=return_attn)
-        
-        new_x += projected_fgbg_tokens
-        
-        new_x = self.reduction(new_x) + self.mlp_channels(self.norm_layer(new_x))
-        
-        return new_x, attn_dict
-    
-    def forward(self, x, return_attn=False):
-        fg_token = self.fg_token.expand(x.size(0), -1, -1)
-        bg_token = self.bg_token.expand(x.size(0), -1, -1)
-
-        fgbg_tokens = self.concat_x(fg_token, bg_token)
-        cat_x = self.concat_x(x, fgbg_tokens)
-        
-        for blk_idx, blk in enumerate(self.blocks):
-            cat_x = blk(cat_x)
-            
-        x, fgbg_tokens = self.split_x(cat_x)
-        
-        x, attn_dict = self.grouping_block(x, fgbg_tokens, return_attn=return_attn)
-
-        fg_token, bg_token = x[:, 0, :], x[:, 1, :]
-        
-        return fg_token, bg_token, attn_dict
-    
 
 @MODELS.register_module()
-class GroupViT(nn.Module):
+class KeyGroupViT(nn.Module):
     r""" Group Vision Transformer
         A PyTorch impl of : `GroupViT: Semantic Segmentation Emerges from Text Supervision`  -
           https://arxiv.org/pdf/2202.11094.pdf
@@ -780,10 +671,12 @@ class GroupViT(nn.Module):
                  drop_rate=0.,
                  attn_drop_rate=0.,
                  drop_path_rate=0.1,
+                 topk_word=8,
                  patch_norm=True,
                  use_checkpoint=False,
                  pos_embed_type='simple',
-                 freeze_patch_embed=False):
+                 freeze_patch_embed=False,
+                 keyword_group=True):
         super().__init__()
         assert patch_size in [4, 8, 16]
         self.num_classes = num_classes
@@ -803,6 +696,9 @@ class GroupViT(nn.Module):
         self.num_group_tokens = num_group_tokens
         self.num_output_groups = num_output_groups
         self.pos_embed_type = pos_embed_type
+        
+        self.topk_word = topk_word
+        
         assert pos_embed_type in ['simple', 'fourier']
 
         norm_layer = nn.LayerNorm
@@ -846,7 +742,10 @@ class GroupViT(nn.Module):
         for i_layer in range(self.num_layers):
 
             dim = int(embed_dim * embed_factors[i_layer])
+            
+            group_len_projector = None
             downsample = None
+            
             if i_layer < self.num_layers - 1:
                 out_dim = embed_dim * embed_factors[i_layer + 1]
                 downsample = GroupingBlock(
@@ -859,6 +758,12 @@ class GroupViT(nn.Module):
                     hard=hard_assignment,
                     gumbel=hard_assignment)
                 num_output_token = num_output_groups[i_layer]
+                
+                if keyword_group == True:
+                    group_len_projector = nn.Sequential(norm_layer(dim),
+                                                        MixerMlp(topk_word, dim//2, num_group_tokens[i_layer]))
+                else:
+                    group_len_projector = None
 
             if i_layer > 0 and num_group_tokens[i_layer] > 0:
                 prev_dim = int(embed_dim * embed_factors[i_layer - 1])
@@ -871,6 +776,9 @@ class GroupViT(nn.Module):
                                                     nn.Linear(prev_dim, dim, bias=False))
             else:
                 group_projector = None
+                
+            
+
             layer = GroupingLayer(
                 dim=dim,
                 num_input_token=num_input_token,
@@ -887,13 +795,13 @@ class GroupViT(nn.Module):
                 downsample=downsample,
                 use_checkpoint=use_checkpoint,
                 group_projector=group_projector,
+                group_len_projector=group_len_projector,
                 # only zero init group token if we have a projection
                 zero_init_group_token=group_projector is not None)
             self.layers.append(layer)
             if i_layer < self.num_layers - 1:
                 num_input_token = num_output_token
                 
-        self.group_fgbg_layer = Group_fgbg(dim=dim, depth=3, num_group_tokens=2)
 
         self.norm = norm_layer(self.num_features)
         self.head = nn.Linear(self.num_features, num_classes) if num_classes > 0 else nn.Identity()
@@ -960,19 +868,37 @@ class GroupViT(nn.Module):
         pos_embed = self.pos_embed
         pos_embed = interpolate_pos_encoding(pos_embed, H, W)
         return pos_embed
-
-    def forward_features(self, x, *, return_attn=False):
-        B = x.shape[0]
-        x, hw_shape = self.patch_embed(x)
-
+    
+    def get_keyword_token(self, patch_emb, word_emb):
+        B, P, C = patch_emb.shape
+        
+        patch_emb = F.normalize(patch_emb, dim=-1)
+        word_emb = F.normalize(word_emb, dim=-1)
+        
+        sim_mat = patch_emb @ rearrange(word_emb, 'b t l -> b l t')
+        
+        _, top_indices = torch.topk(sim_mat.mean(dim=1), self.topk_word, dim=1)
+        
+        top_word_emb = torch.gather(word_emb, 1, top_indices.unsqueeze(-1).expand(-1, -1, C))
+        
+        return top_word_emb
+        
+    def forward_features(self, image, *, text=None, return_attn=False):
+        B = image.shape[0]
+        x, hw_shape = self.patch_embed(image) # [B, N, C],  N = (H * W) / (P * P) 
+        
         x = x + self.get_pos_embed(B, *hw_shape)
         x = self.pos_drop(x)
+        
+        if text != None:
+            keyword_emb = self.get_keyword_token(x, text)
+        else:
+            keyword_emb = None
         
         group_token = None
         attn_dict_list = []
         for layer in self.layers:
-            x, group_token, attn_dict = layer(x, group_token, return_attn=return_attn)
-
+            x, group_token, attn_dict = layer(x, group_token, keyword_emb, return_attn=return_attn)
             attn_dict_list.append(attn_dict)
 
         x = self.norm(x)
@@ -994,8 +920,8 @@ class GroupViT(nn.Module):
 
         return x
 
-    def forward(self, x, *, return_feat=False, return_attn=False, as_dict=False, return_fgbg=False):
-        x, group_token, attn_dicts = self.forward_features(x, return_attn=return_attn)
+    def forward(self, image, *, text=None, return_feat=False, return_attn=False, as_dict=False):
+        x, group_token, attn_dicts = self.forward_features(image, text=text, return_attn=return_attn)
         
         x_feat = x if return_feat else None
         
@@ -1004,25 +930,11 @@ class GroupViT(nn.Module):
         
         outs.append(self.forward_image_head(x), name='x')
         
-        if return_fgbg:
-            fg_token, bg_token, fgbg_attn_dicts = self.group_fgbg_layer(x)
-            
-            fg_feat = fg_token if return_feat else None
-            bg_feat = bg_token if return_feat else None
-            outs.append(fg_token, name='fg')
-            outs.append(bg_token, name='bg')
-        
         if return_feat:
             outs.append(x_feat, name='feat')
             
-            if return_fgbg:
-                outs.append(fg_feat, name='fg_feat')
-                outs.append(bg_feat, name='bg_feat')
-
         if return_attn:
             outs.append(attn_dicts, name='attn_dicts')
-            if return_fgbg:
-                outs.append(fgbg_attn_dicts, name='fgbg_attn_dicts')
             
         return outs.as_return()
     
