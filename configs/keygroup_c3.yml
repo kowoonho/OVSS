@@ -1,7 +1,7 @@
 data:
-  batch_size: 128
+  batch_size: 64
   pin_memory: true
-  num_workers: 12
+  num_workers: 8
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -54,9 +54,9 @@ data:
     re_count: 1
   text_aug:
     max_seq_len: 77
-    multi_label: 3
-    key_label: 0
-    word_type: ['noun'] # list
+    multi_label: 0
+    key_label: 3
+    word_type: ['noun', 'key_word'] # list
 
 train:
   start_epoch: 0
