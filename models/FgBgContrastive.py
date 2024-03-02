@@ -218,9 +218,6 @@ class FgBgContrastive(nn.Module):
         logits_per_img = image_x @ dist_collect(text_x).t()
         logits_per_text = text_x @ dist_collect(image_x).t()
         
-        print(logits_per_img.shape)
-        print(logits_per_text.shape)
-
 
         # get label globally
         # [B, L1, B, L2, W]
@@ -240,14 +237,56 @@ class FgBgContrastive(nn.Module):
         # [BxL2, WxBxL1]
         labels_per_text = rearrange(labels_per_text, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
         
-        print(labels_per_img.shape)
-        print(labels_per_text.shape)
-        print(labels_per_img)
-        print(labels_per_text)
         loss_img = self.soft_cross_entropy(logits_per_img * logit_scale, labels_per_img)
         loss_text = self.soft_cross_entropy(logits_per_text * logit_scale, labels_per_text)
 
         loss = 0.5 * (loss_img + loss_text)
+        
+        return loss
+    
+    def fgbg_loss(self, fgbg_feat1, fgbg_feat2):
+
+        # [B, 4, C]
+        fgbg_feat = torch.cat([fgbg_feat1, fgbg_feat2], dim=1)
+        
+        fgbg_feat = F.normalize(fgbg_feat, dim=-1)
+        
+        # [B, 4, 4]
+        dist_per_feat = fgbg_feat @ rearrange(fgbg_feat, 'b l c -> b c l')
+
+        if self.share_temperature:
+            logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
+        else:
+            logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
+
+        B, L, _ = fgbg_feat.shape
+        
+        pattern = torch.tensor([[1,0,1,0],
+                                [0,1,0,1],
+                                [1,0,1,0],
+                                [0,1,0,1]], dtype=fgbg_feat.dtype, device=fgbg_feat.device)
+        
+        # [B, 4, 4]
+        pos_labels_batch = pattern.unsqueeze(0).repeat(B, 1, 1)
+
+        fgbg_x = rearrange(fgbg_feat, 'b l c -> (b l) c')
+        
+        # [4B, 4B*N] N : gpu_num
+        logits_per_feat = fgbg_x @ dist_collect(fgbg_x).t()
+
+
+        # get label globally
+        # [B, L1, B, L2, W]
+        global_labels = F.one_hot(
+            torch.ones(B, L, B, L, dtype=torch.long, device=fgbg_x.device) * dist.get_rank(),
+            num_classes=dist.get_world_size()).to(fgbg_x.dtype)
+        
+        global_labels *= rearrange(pos_labels_batch, 'b l1 l2 -> b l1 1 l2 1') * repeat(
+            torch.eye(B, dtype=fgbg_x.dtype, device=fgbg_x.device), 'b1 b2 -> b1 1 b2 1 1')
+        # [BxL1, WxBxL2]
+        global_labels = rearrange(global_labels, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
+        
+        loss = self.soft_cross_entropy(logits_per_feat * logit_scale, global_labels)
         
         return loss
     
@@ -278,9 +317,7 @@ class FgBgContrastive(nn.Module):
         hard_loss = self.soft_cross_entropy(logits_per_groups * logit_scale, labels_per_groups)
         
         return hard_loss
-        
-        
-    
+         
     def key_token_loss(self, pos_feat, neg_feat, anchor_feat):
         
         B = anchor_feat.shape[0]
@@ -394,32 +431,7 @@ class FgBgContrastive(nn.Module):
         nonkey_feat = nonkey_masked_sum / nonkey_masked_count
         
         return key_feat, nonkey_feat
-    
-    # def key_token_selection(self, image_feat, text_multi_label_feat):
-    #     B, G, C = image_feat.shape
-    #     _, T, _ = text_multi_label_feat.shape
-        
-    #     image_feat = F.normalize(image_feat, dim=-1)
-    #     text_feat = F.normalize(text_multi_label_feat, dim=-1)
-        
-    #     token_score = image_feat @ rearrange(text_feat, 'b l c -> b c l') # [B, G, T]
-        
-    #     token_score = F.normalize(token_score, dim=-1)
-        
-    #     attention_weight = F.softmax(token_score, dim=-1)
-    #     inverse_attention_weight = 1 - attention_weight
-        
-    #     # [B, G, T, C]
-    #     attention_score = attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
-        
-    #     inverse_attention_score = inverse_attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
-        
-        
-    #     key_feat = attention_score.mean(dim=1)
-        
-    #     nonkey_feat = inverse_attention_score.mean(dim=1)
-        
-    #     return key_feat, nonkey_feat
+
         
     def encode_image(self, image, *, return_attn=False, return_feat=False, as_dict=False):
         outs = Result(as_dict)
@@ -576,7 +588,7 @@ class FgBgContrastive(nn.Module):
         fg_feat = self.fgbg_projector(fg_feat)
         bg_feat = self.fgbg_projector(bg_feat)
         
-        return fg_feat, bg_feat
+        return fg_feat.unsqueeze(1), bg_feat.unsqueeze(1)
             
             
         
@@ -595,6 +607,10 @@ class FgBgContrastive(nn.Module):
         fg_feat1, bg_feat1 = self.get_fgbg_feat(image1, image_feat1, attn_dicts1)
         fg_feat2, bg_feat2 = self.get_fgbg_feat(image2, image_feat2, attn_dicts2)
         
+        fgbg_feat1 = torch.cat([fg_feat1, bg_feat1], dim=1)
+        fgbg_feat2 = torch.cat([fg_feat2, bg_feat2], dim=1)
+        
+        
         text_outs = self.encode_text(text, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
         text_x = text_outs['text_x']
@@ -602,6 +618,8 @@ class FgBgContrastive(nn.Module):
         
         losses = self.loss(image_x1, text_x)
         losses_dict = dict(loss=losses)
+        
+        losses_dict['fgbg_loss'] = self.fgbg_loss(fgbg_feat1, fgbg_feat2)
         
         if self.with_multi_label_loss:
             assert self.multi_label > 0 or self.key_label > 0
