@@ -410,6 +410,7 @@ class MultiLabelContrastive(nn.Module):
         return outs.as_return()
 
     def encode_text(self, text, *, as_dict=False, max_word=0, key_label=0):
+        
         assert text.ndim in [2, 3], text.ndim
         squeeze_dim = False
         num_text = 1
@@ -422,8 +423,8 @@ class MultiLabelContrastive(nn.Module):
         outs = Result(as_dict=as_dict)
         # [B, C]
         x = self.text_encoder(text)
-        text_x = self.text_projector(x)
-        
+        text_x = self.text_projector(x['text_x'])
+            
         outs.append(text_x, 'text_x')
         if squeeze_dim:
             text_x = rearrange(text_x, '(b n) c -> b n c', n=num_text)

@@ -399,9 +399,9 @@ class MultiLabelContrastive2(nn.Module):
         
         return key_feat, nonkey_feat
         
-    def encode_image(self, image, text, *, return_feat=False, as_dict=False):
+    def encode_image(self, image, *, text=None, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, text, return_feat=return_feat, as_dict=True)
+        img_outs = self.img_encoder(image, text=text, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         
@@ -551,7 +551,7 @@ class MultiLabelContrastive2(nn.Module):
     def forward_train(self, image, text):
         text_feat = self.build_word_embedding(text[:,0])
         
-        image_outs = self.encode_image(image, text_feat, return_feat = True, as_dict=True)
+        image_outs = self.encode_image(image, text=text_feat, return_feat = True, as_dict=True)
         # [B, C]
         image_x = image_outs['image_x'] 
         

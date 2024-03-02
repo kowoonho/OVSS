@@ -555,7 +555,7 @@ class GroupingLayer(nn.Module):
         """
         
         if self.num_group_token > 0:
-            if self.group_len_projector:
+            if self.group_len_projector != None and keyword_emb != None:
                 group_token = self.group_len_projector(keyword_emb)  
                 
             else:
@@ -883,14 +883,17 @@ class KeyGroupViT(nn.Module):
         
         return top_word_emb
         
-    def forward_features(self, image, text, *, return_attn=False):
+    def forward_features(self, image, *, text=None, return_attn=False):
         B = image.shape[0]
         x, hw_shape = self.patch_embed(image) # [B, N, C],  N = (H * W) / (P * P) 
         
         x = x + self.get_pos_embed(B, *hw_shape)
         x = self.pos_drop(x)
         
-        keyword_emb = self.get_keyword_token(x, text)
+        if text != None:
+            keyword_emb = self.get_keyword_token(x, text)
+        else:
+            keyword_emb = None
         
         group_token = None
         attn_dict_list = []
@@ -917,8 +920,8 @@ class KeyGroupViT(nn.Module):
 
         return x
 
-    def forward(self, image, text, *, return_feat=False, return_attn=False, as_dict=False):
-        x, group_token, attn_dicts = self.forward_features(image, text, return_attn=return_attn)
+    def forward(self, image, *, text=None, return_feat=False, return_attn=False, as_dict=False):
+        x, group_token, attn_dicts = self.forward_features(image, text=text, return_attn=return_attn)
         
         x_feat = x if return_feat else None
         
