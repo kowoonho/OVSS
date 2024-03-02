@@ -85,7 +85,6 @@ class MultiLabelContrastive(nn.Module):
     def __init__(self,
                  img_encoder,
                  text_encoder,
-                 clip_encoder,
                  output_dim=256,
                  contrast_temperature=0.07,
                  proj_num_layers=2,
@@ -478,10 +477,6 @@ class MultiLabelContrastive(nn.Module):
         B, T, C = texts.shape
         
         texts = texts.reshape(-1, C)
-
-        text_embs = self.clip_encoder.encode_text(texts)
-        
-        kmeans = KMeans(n_clusters=self.K, max_iter=100).fit(text_embs.cpu().detach().numpy())
         
         distances = np.sqrt(((text_embs.cpu().detach().numpy() - kmeans.cluster_centers_[:, np.newaxis])**2).sum(axis=2))
         
@@ -539,8 +534,6 @@ class MultiLabelContrastive(nn.Module):
         return group_similar_label
 
 
-        
-        
         
     def forward_train(self, image, text):
         image_outs = self.encode_image(image, return_feat = True, as_dict=True)

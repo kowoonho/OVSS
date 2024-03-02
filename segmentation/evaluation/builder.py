@@ -12,7 +12,7 @@ import mmcv
 from mmseg.datasets import build_dataloader, build_dataset
 from mmseg.datasets.pipelines import Compose
 from omegaconf import OmegaConf
-from utils import build_dataset_class_tokens
+from utility import build_dataset_class_tokens
 
 from .group_vit_seg import GroupViTSegInference
 
@@ -49,6 +49,7 @@ def build_seg_inference(model, dataset, text_transform, config):
         classnames = dataset.CLASSES
     text_tokens = build_dataset_class_tokens(text_transform, config.template, classnames)
     text_embedding = model.build_text_embedding(text_tokens)
+    
     kwargs = dict(with_bg=with_bg)
     if hasattr(cfg, 'test_cfg'):
         kwargs['test_cfg'] = cfg.test_cfg

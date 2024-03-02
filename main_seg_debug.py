@@ -24,7 +24,7 @@ from mmcv.runner import set_random_seed
 from models import build_model
 from omegaconf import OmegaConf, read_write
 from segmentation.evaluation import build_seg_dataloader, build_seg_dataset, build_seg_inference
-from utils import get_config, get_logger, load_checkpoint
+from utility import get_config, get_logger, load_checkpoint
 try:
     # noinspection PyUnresolvedReferences
     from apex import amp
@@ -189,6 +189,7 @@ def main():
     else:
         rank = -1
         world_size = -1
+        
     torch.cuda.set_device(cfg.local_rank)
 
     dist.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank)

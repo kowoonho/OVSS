@@ -85,6 +85,7 @@ def get_config(args, mode='train'):
     if hasattr(args, 'vis') and args.vis:
         cfg.vis = args.vis
 
+    # if hasattr(args, 'local_rank') and args.local_rank:
     cfg.local_rank = args.local_rank
 
     OmegaConf.set_readonly(cfg, True)

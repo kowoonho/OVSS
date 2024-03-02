@@ -24,7 +24,7 @@ from mmcv.runner import set_random_seed
 from models import build_model
 from omegaconf import OmegaConf, read_write
 from segmentation.evaluation import build_seg_dataloader, build_seg_dataset, build_seg_inference
-from utils import get_config, get_logger, load_checkpoint
+from utility import get_config, get_logger, load_checkpoint
 try:
     # noinspection PyUnresolvedReferences
     from apex import amp
@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument(
         '--cfg',
         type=str,
-        default="/workspace/Code/OVSS/configs/group_vit_gcc_yfcc_30e.yml",
+        required=True,
         help='path to config file',
     )
     parser.add_argument(
@@ -64,7 +64,7 @@ def parse_args():
         nargs='+')
 
     # distributed training
-    parser.add_argument('--local_rank', type=int, default=1, help='local rank for DistributedDataParallel')
+    parser.add_argument('--local_rank', type=int, required=True, help='local rank for DistributedDataParallel')
 
     args = parser.parse_args()
 

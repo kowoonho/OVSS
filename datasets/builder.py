@@ -65,12 +65,13 @@ def build_loader(config):
         successfully build train dataset')
     
     dataset_val = build_dataset(is_train=False, config=config)
+    
     print(f'local rank {local_rank} / global rank {dist.get_rank()} \
         successfully build val dataset')
     
     dc_collate = partial(collate, samples_per_gpu=config.batch_size)
     init_fn = partial(worker_init_fn, num_workers=config.num_workers, rank=dist.get_rank(), seed=config.seed)
-    
+            
     # train loader
     data_loader_train = wds.WebLoader(
         dataset_train.batched(config.batch_size, dc_collate, partial=False),
@@ -80,9 +81,11 @@ def build_loader(config):
         pin_memory=config.pin_memory,
         persistent_workers=config.num_workers > 0,
         # persistent_workers=False,
-        worker_init_fn=init_fn)
+        worker_init_fn=init_fn
+    )
 
     train_len = len(dataset_train)
+    
     train_nbatches = max(1, train_len // (config.batch_size * dist.get_world_size()))
     data_loader_train = (data_loader_train.with_epoch(train_nbatches).with_length(train_nbatches))
     
@@ -110,8 +113,9 @@ def warn_and_continue(exn):
     return True
 
 
-def build_dataset(is_train, config):
+def build_dataset(is_train, config, distribute = True):
     img_transform = build_img_transform(is_train, config.img_aug)
+
     text_transform = build_text_transform(is_train, config.text_aug)
     split = 'train' if is_train else 'val'
     dataset_type = None
@@ -138,23 +142,47 @@ def build_dataset(is_train, config):
     print(f'Found {len(tar_file_list)} files in total for split {split}')
     # yapf: disable
     if is_train:
-        dataset = (  # noqa
-            wds.WebDataset(tar_file_list, repeat=True, handler=warn_and_continue)
-            .shuffle(config.shuffle_buffer)
-            .decode('pil', handler=warn_and_continue)
-            .rename(image='jpg;png;jpeg', text='text;txt', keep=False, handler=warn_and_continue)
-            .map_dict(image=img_transform, text=text_transform, handler=warn_and_continue)
-            .with_length(total_length))
+
+        if config.imc:
+            dataset = (
+                wds.WebDataset(tar_file_list, repeat=True, handler=warn_and_continue)
+                .shuffle(config.shuffle_buffer)
+                .decode('pil', handler=warn_and_continue)
+                .rename(image1='jpg;png;jpeg', image2='jpg;png;jpeg', text='text;txt', keep=False, handler=warn_and_continue)
+                .map_dict(image1=img_transform, image2=img_transform, text=text_transform, handler=warn_and_continue)
+                .with_length(total_length)
+            )
+        else:
+            dataset = (
+                wds.WebDataset(tar_file_list, repeat=True, handler=warn_and_continue)
+                .shuffle(config.shuffle_buffer)
+                .decode('pil', handler=warn_and_continue)
+                .rename(image='jpg;png;jpeg', text='text;txt', keep=False, handler=warn_and_continue)
+                .map_dict(image=img_transform, text=text_transform, handler=warn_and_continue)
+                .with_length(total_length)
+            )
+            
     else:
         # zero shot classification validation
-        dataset = (  # noqa
-            wds.WebDataset(tar_file_list, repeat=False, handler=warn_and_continue)
-            .shuffle(0)
-            .decode('pil', handler=warn_and_continue)
-            .rename(image='jpg;png;jpeg', target='cls', keep=False)
-            .map_dict(image=img_transform, target=ToDataContainer())
-            .slice(dist.get_rank(), total_length, dist.get_world_size())
-            .with_length(total_length))
+        if distribute:
+            dataset = (  # noqa
+                wds.WebDataset(tar_file_list, repeat=False, handler=warn_and_continue)
+                .shuffle(0)
+                .decode('pil', handler=warn_and_continue)
+                .rename(image='jpg;png;jpeg', target='cls', keep=False)
+                .map_dict(image=img_transform, target=ToDataContainer())
+                .slice(dist.get_rank(), total_length, dist.get_world_size())
+                .with_length(total_length))
+        
+        else:
+            dataset = (  # noqa
+                wds.WebDataset(tar_file_list, repeat=False, handler=warn_and_continue)
+                .shuffle(0)
+                .decode('pil', handler=warn_and_continue)
+                .rename(image='jpg;png;jpeg', target='cls', keep=False)
+                .map_dict(image=img_transform, target=ToDataContainer())
+                .with_length(total_length))
+        
     # yapf: enable
 
     return dataset

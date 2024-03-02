@@ -18,8 +18,8 @@ import torch.nn.functional as F
 from einops import rearrange
 from mmseg.models import EncoderDecoder
 from PIL import Image
-from utils import get_logger
-from utils.imutils import make_binary_mask
+from utility import get_logger
+from utility.imutils import make_binary_mask
 import os
 
 GROUP_PALETTE = np.loadtxt(osp.join(osp.dirname(osp.abspath(__file__)), 'group_palette.txt'), dtype=np.uint8)[:, ::-1]
@@ -176,7 +176,7 @@ class GroupViTSegInference(EncoderDecoder):
                     prev_attn_masks = prev_attn_masks @ attn_masks
                 # [B, nH, HxW, G] -> [B, nH, H, W, G]
                 attn_maps.append(resize_attn_map(prev_attn_masks, *img.shape[-2:]))
-
+                
         for i in range(len(attn_maps)):
             attn_map = attn_maps[i]
             # [B, nh, H, W, G]
@@ -195,7 +195,6 @@ class GroupViTSegInference(EncoderDecoder):
                 attn_map = F.one_hot(attn_map.argmax(dim=-1), num_classes=attn_map.shape[-1]).to(dtype=attn_map.dtype)
 
             attn_maps[i] = attn_map
-
         return attn_maps
 
     def encode_decode(self, img, img_metas):

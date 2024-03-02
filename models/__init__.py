@@ -14,5 +14,8 @@ from .keygroup_vit import KeyGroupViT
 from .multi_label_contrastive import MultiLabelContrastive
 from .transformer import TextTransformer
 from .multi_label_contrastive_ver2 import MultiLabelContrastive2
+from .FgBgContrastive import FgBgContrastive
+from .found import FoundModel
 
-__all__ = ['build_model', 'MultiLabelContrastive', 'GroupViT', 'TextTransformer', 'KeyGroupViT']
+__all__ = ['build_model', 'MultiLabelContrastive', 'GroupViT', 
+           'TextTransformer', 'KeyGroupViT', 'FgBgContrastive', 'FoundModel']
