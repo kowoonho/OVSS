@@ -7,6 +7,7 @@
 #
 # Written by Jiarui Xu
 # -------------------------------------------------------------------------
+import sys
 
 import diffdist.functional as diff_dist
 import numpy as np
@@ -14,12 +15,17 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
+import itertools
+from sklearn.cluster import KMeans
 
 from einops import rearrange, repeat
 from timm.loss import SoftTargetCrossEntropy
 
 from .builder import MODELS
 from .misc import Result
+from sklearn.cluster import KMeans
+from utility.myutils import get_attn_map, group_matching, select_foreground_groups, divide_group
+
 
 
 
@@ -79,11 +85,13 @@ class ProjectMLP(nn.Module):
 
 
 @MODELS.register_module()
-class MultiLabelContrastive(nn.Module):
+class FgBgContrastive(nn.Module):
 
     def __init__(self,
                  img_encoder,
                  text_encoder,
+                 saliency_encoder,
+                 saliency_decoder_weight=None,
                  output_dim=256,
                  contrast_temperature=0.07,
                  proj_num_layers=2,
@@ -100,7 +108,11 @@ class MultiLabelContrastive(nn.Module):
 
         self.img_encoder = MODELS.build(img_encoder)
         self.text_encoder = MODELS.build(text_encoder)
-
+        self.saliency_encoder = MODELS.build(saliency_encoder)
+        self.saliency_encoder.decoder_load_weights(weights_path=saliency_decoder_weight)
+        self.saliency_encoder.eval()
+        
+        
         self.contrast_temperature = contrast_temperature
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / contrast_temperature))
         self.cross_entropy = nn.CrossEntropyLoss()
@@ -122,10 +134,13 @@ class MultiLabelContrastive(nn.Module):
                 in_dim=self.text_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
             self.img_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.img_projector)
             self.text_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.text_projector)
-
+            
+            self.fgbg_projector = ProjectMLP()
+            self.fgbg_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.fgbg_projector)
         else:
             self.img_projector = nn.Identity()
             self.text_projector = nn.Identity()
+            self.fgbg_projector = nn.Identity()
 
         self.share_temperature = share_temperature
         if (self.multi_label or self.key_label) and not self.share_temperature:
@@ -202,6 +217,9 @@ class MultiLabelContrastive(nn.Module):
         
         logits_per_img = image_x @ dist_collect(text_x).t()
         logits_per_text = text_x @ dist_collect(image_x).t()
+        
+        print(logits_per_img.shape)
+        print(logits_per_text.shape)
 
 
         # get label globally
@@ -222,6 +240,10 @@ class MultiLabelContrastive(nn.Module):
         # [BxL2, WxBxL1]
         labels_per_text = rearrange(labels_per_text, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
         
+        print(labels_per_img.shape)
+        print(labels_per_text.shape)
+        print(labels_per_img)
+        print(labels_per_text)
         loss_img = self.soft_cross_entropy(logits_per_img * logit_scale, labels_per_img)
         loss_text = self.soft_cross_entropy(logits_per_text * logit_scale, labels_per_text)
 
@@ -399,12 +421,14 @@ class MultiLabelContrastive(nn.Module):
         
     #     return key_feat, nonkey_feat
         
-    def encode_image(self, image, *, return_feat=False, as_dict=False):
+    def encode_image(self, image, *, return_attn=False, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
+        img_outs = self.img_encoder(image, return_attn=return_attn, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         
+        if return_attn:
+            outs.append(img_outs['attn_dicts'], 'attn_dicts')
         if return_feat:
             outs.append(self.img_projector(img_outs['feat']), 'image_feat')
         return outs.as_return()
@@ -419,7 +443,7 @@ class MultiLabelContrastive(nn.Module):
             text = rearrange(text, 'b n l -> (b n) l', n=num_text)
             squeeze_dim = True
 
-        outs = Result(as_dict=as_dict)
+        outs = Result(as_dict=True)
         # [B, C]
         x = self.text_encoder(text)
         text_x = self.text_projector(x)
@@ -475,6 +499,9 @@ class MultiLabelContrastive(nn.Module):
         B, T, C = texts.shape
         
         texts = texts.reshape(-1, C)
+
+        
+        kmeans = KMeans(n_clusters=self.K, max_iter=100).fit(text_embs.cpu().detach().numpy())
         
         distances = np.sqrt(((text_embs.cpu().detach().numpy() - kmeans.cluster_centers_[:, np.newaxis])**2).sum(axis=2))
         
@@ -532,32 +559,61 @@ class MultiLabelContrastive(nn.Module):
         return group_similar_label
 
 
+    def get_fgbg_feat(self, image, image_feat, attn_dicts):
         
-    def forward_train(self, image, text):
-        image_outs = self.encode_image(image, return_feat = True, as_dict=True)
+        with torch.no_grad():
+            # [B, G, H, W]
+            group_result = group_matching(image, attn_dicts)
+            
+            # [B, 1, H, W]
+            saliency_map = self.saliency_encoder.get_binary_result(image)
+        
+        foreground_group_index = select_foreground_groups(group_result, saliency_map)
+
         # [B, C]
-        image_x = image_outs['image_x'] 
+        fg_feat, bg_feat = divide_group(image_feat, foreground_group_index)
         
-        # [B, G, C]
-        image_feat = image_outs['image_feat']
+        fg_feat = self.fgbg_projector(fg_feat)
+        bg_feat = self.fgbg_projector(bg_feat)
         
-        text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
+        return fg_feat, bg_feat
+            
+            
+        
+    def forward_train(self, image1, image2, text):
+        image1_outs = self.encode_image(image1, return_attn=True, return_feat = True, as_dict=True)
+        
+        image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
+        # [B, C]
+        image_x1, image_x2 = (image1_outs['image_x'], image2_outs['image_x'])
+        
+        attn_dicts1, attn_dicts2 = (image1_outs['attn_dicts'], image2_outs['attn_dicts'])
+
+        # [B, G, C]        
+        image_feat1, image_feat2 = (image1_outs['image_feat'], image2_outs['image_feat'])
+        
+        fg_feat1, bg_feat1 = self.get_fgbg_feat(image1, image_feat1, attn_dicts1)
+        fg_feat2, bg_feat2 = self.get_fgbg_feat(image2, image_feat2, attn_dicts2)
+        
+        text_outs = self.encode_text(text, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
         text_x = text_outs['text_x']
         
         
-        losses = self.loss(image_x, text_x)
+        losses = self.loss(image_x1, text_x)
         losses_dict = dict(loss=losses)
         
         if self.with_multi_label_loss:
             assert self.multi_label > 0 or self.key_label > 0
-            image_multi_label_x = image_x.unsqueeze(1)
+            image_multi_label_x = image_x1.unsqueeze(1)
             if self.multi_label:
                 text_multi_label_x = text_outs['text_multi_label_x']
             if self.key_label:
                 text_multi_label_x = text_outs['text_key']
             losses_dict['multi_label_loss'] = self.multi_label_loss(image_multi_label_x,
                                                                     text_multi_label_x) * self.multi_label_loss_weight
+            
+        
             
         if self.with_key_token:
             
@@ -566,20 +622,9 @@ class MultiLabelContrastive(nn.Module):
             if self.key_label:
                 text_multi_label_x = text_outs['text_key']
             
-            key_feat, nonkey_feat = self.key_token_selection(image_feat, text_multi_label_x)
+            key_feat, nonkey_feat = self.key_token_selection(image_feat1, text_multi_label_x)
             losses_dict['key_loss'] = self.multi_label_key_loss(key_feat, nonkey_feat, text_multi_label_x)
-            
-        if self.with_hard_negative_sample:
-            assert self.key_label > 0
-            text_key = text_outs['text_key'] # [B, 3, C]
-            losses_dict['hard_loss'] = self.hard_label_loss(image_feat, text_key)
-            
-        if self.with_key_label:
-            assert self.key_label > 0
-            # [K, 77]
-            key_text = self.select_keyword(text[:,1:]) 
-            key_text_x = self.encode_text(key_text, as_dict=True)['text_x']
-            losses_dict['key_loss'] = self.key_label_loss(image_feat, key_text_x)
+        
         
             
             
@@ -590,11 +635,11 @@ class MultiLabelContrastive(nn.Module):
     def forward_test(self, image, text):
         return self.zero_shot_pred(image, text)
 
-    def forward(self, image, text):
+    def forward(self, image1, image2, text):
         if self.training:
-            return self.forward_train(image, text)
+            return self.forward_train(image1, image2, text)
         else:
-            return self.forward_test(image, text)
+            return self.forward_test(image1, image2, text)
 
     @torch.no_grad()
     def build_text_embedding(self, text):

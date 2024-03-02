@@ -14,15 +14,12 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.cluster import KMeans
 
 from einops import rearrange, repeat
 from timm.loss import SoftTargetCrossEntropy
 
 from .builder import MODELS
 from .misc import Result
-import clip
-from sklearn.cluster import KMeans
 
 
 
@@ -87,7 +84,6 @@ class MultiLabelContrastive2(nn.Module):
     def __init__(self,
                  img_encoder,
                  text_encoder,
-                 clip_encoder,
                  output_dim=256,
                  contrast_temperature=0.07,
                  proj_num_layers=2,
@@ -104,7 +100,6 @@ class MultiLabelContrastive2(nn.Module):
 
         self.img_encoder = MODELS.build(img_encoder)
         self.text_encoder = MODELS.build(text_encoder)
-        self.clip_encoder, _ = clip.load(clip_encoder, device='cpu')
 
         self.contrast_temperature = contrast_temperature
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / contrast_temperature))

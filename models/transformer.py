@@ -98,7 +98,7 @@ class TextTransformer(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    def forward(self, text, *, as_dict=True):
+    def forward(self, text, *, as_dict=False):
         x = self.token_embedding(text)
         
         outs = Result(as_dict=as_dict)
@@ -113,7 +113,7 @@ class TextTransformer(nn.Module):
         # take features from the eot embedding (eot_token is the highest number in each sequence)
         text_x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)]
         outs.append(text_x, name='text_x')
-        outs.append(x, name='text_feat')
+        # outs.append(x, name='text_feat')
         return outs.as_return()
     
 
