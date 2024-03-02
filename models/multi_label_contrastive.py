@@ -14,16 +14,12 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-import itertools
-from sklearn.cluster import KMeans
 
 from einops import rearrange, repeat
 from timm.loss import SoftTargetCrossEntropy
 
 from .builder import MODELS
 from .misc import Result
-import clip
-from sklearn.cluster import KMeans
 
 
 
@@ -88,7 +84,6 @@ class MultiLabelContrastive(nn.Module):
     def __init__(self,
                  img_encoder,
                  text_encoder,
-                 clip_encoder,
                  output_dim=256,
                  contrast_temperature=0.07,
                  proj_num_layers=2,
@@ -105,7 +100,6 @@ class MultiLabelContrastive(nn.Module):
 
         self.img_encoder = MODELS.build(img_encoder)
         self.text_encoder = MODELS.build(text_encoder)
-        self.clip_encoder, _ = clip.load(clip_encoder, device='cpu')
 
         self.contrast_temperature = contrast_temperature
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / contrast_temperature))
@@ -482,10 +476,6 @@ class MultiLabelContrastive(nn.Module):
         B, T, C = texts.shape
         
         texts = texts.reshape(-1, C)
-
-        text_embs = self.clip_encoder.encode_text(texts)
-        
-        kmeans = KMeans(n_clusters=self.K, max_iter=100).fit(text_embs.cpu().detach().numpy())
         
         distances = np.sqrt(((text_embs.cpu().detach().numpy() - kmeans.cluster_centers_[:, np.newaxis])**2).sum(axis=2))
         
@@ -543,8 +533,6 @@ class MultiLabelContrastive(nn.Module):
         return group_similar_label
 
 
-        
-        
         
     def forward_train(self, image, text):
         image_outs = self.encode_image(image, return_feat = True, as_dict=True)

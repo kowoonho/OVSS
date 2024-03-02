@@ -46,7 +46,7 @@ from models import build_model
 from omegaconf import OmegaConf, read_write
 from segmentation.evaluation import build_seg_dataloader, build_seg_dataset, build_seg_inference
 from timm.utils import AverageMeter, accuracy
-from utils import (auto_resume_helper, build_dataset_class_tokens, build_optimizer, build_scheduler, data2cuda,
+from utility import (auto_resume_helper, build_dataset_class_tokens, build_optimizer, build_scheduler, data2cuda,
                    get_config, get_grad_norm, get_logger, load_checkpoint, parse_losses, reduce_tensor, save_checkpoint)
 from metric.evaluate import evalutate
 
@@ -61,12 +61,13 @@ except ImportError:
 
 def parse_args():
     parser = argparse.ArgumentParser('GroupViT training and evaluation script')
-    parser.add_argument('--cfg', type=str, required=True, help='path to config file')
+    parser.add_argument('--cfg', type=str, default="/workspace/Code/OVSS/configs/groupvit_c3.yml", help='path to config file')
     parser.add_argument('--opts', help="Modify config options by adding 'KEY=VALUE' list. ", default=None, nargs='+')
 
     # easy config modification
     parser.add_argument('--batch-size', type=int, help='batch size for single GPU')
     parser.add_argument('--resume', help='resume from checkpoint')
+
     parser.add_argument(
         '--amp-opt-level',
         type=str,

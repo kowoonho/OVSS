@@ -1,7 +1,7 @@
 data:
-  batch_size: 16
+  batch_size: 32 # it should be bigger than 16
   pin_memory: true
-  num_workers: 12
+  num_workers: 4
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -16,7 +16,7 @@ data:
         length: 2891445
       gcc12m:
         type: img_txt_pair
-        path: ${data.dataset.DATA}/local_data/clip-vit-b-16_8_c12_shards
+        path: ${data.dataset.DATA}/local_data/gcc12m_shards
         prefix: gcc-conceptual-12m-{000000..001242}.tar
         length: 11156203
       
@@ -58,9 +58,11 @@ data:
     key_label: 0
     word_type: ['noun'] # list
 
+  imc: True # Intra-Modal-Contrastive
+
 train:
   start_epoch: 0
-  epochs: 30
+  epochs: 40
   warmup_epochs: 2
   base_lr: 1.6e-3
   weight_decay: 0.05
@@ -112,9 +114,9 @@ local_rank: ???
 vis: []
 
 model:
-  type: MultiLabelContrastive2
+  type: FgBgContrastive
   img_encoder:
-    type: KeyGroupViT
+    type: GroupViT
     embed_dim: 384
     num_heads: [6, 6, 6]
     depths: [6, 3, 3]
@@ -125,17 +127,25 @@ model:
   text_encoder:
     type: TextTransformer
     context_length: 77
-    width: 384
+    width: 256
     layers: 12
     vocab_size: 49408
-  clip_encoder: 'ViT-B/32'
+  saliency_encoder:
+    type: FoundModel
+    vit_model: dino
+    vit_arch: vit_small
+    vit_patch_size: 8
+    enc_type_feats: k
+    bkg_type_feats: k
+    bkg_th: 0.3
+  saliency_decoder_weight: '/workspace/Dataset/pre-trained_weights/FOUND/decoder_weights.pt'
   contrast_temperature: 0.07
   proj_num_layers: 2
   output_dim: 256
   multi_label: ${data.text_aug.multi_label}
   key_label: ${data.text_aug.key_label}
   with_multi_label_loss: True
-  with_key_token: True
+  with_key_token: False
   with_hard_negative_sample: False
   with_key_label: False
   K: 16

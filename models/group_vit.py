@@ -153,7 +153,6 @@ class AssignAttention(nn.Module):
         raw_attn = (q @ k.transpose(-2, -1)) * self.scale
         
         attn = self.get_attn(raw_attn)
-        
         if return_attn:
             hard_attn = attn.clone()
             soft_attn = self.get_attn(raw_attn, gumbel=False, hard=False)
@@ -168,7 +167,7 @@ class AssignAttention(nn.Module):
 
         # [B, nh, N, C//nh] <- [B, nh, N, S] @ [B, nh, S, C//nh]
         out = rearrange(attn @ v, 'b h n c -> b n (h c)', h=self.num_heads, b=B, n=N, c=C // self.num_heads)
-
+        
         out = self.proj(out)
         out = self.proj_drop(out)
         return out, attn_dict
@@ -266,10 +265,10 @@ class GroupingBlock(nn.Module):
         # [B, S_2, C] <- [B, S_1, C]
         projected_group_tokens = self.mlp_inter(group_tokens.transpose(1, 2)).transpose(1, 2)
         projected_group_tokens = self.norm_post_tokens(projected_group_tokens)
+        
         return projected_group_tokens
 
     def forward(self, x, group_tokens, return_attn=False):
-        
         """
         Args:
             x (torch.Tensor): image tokens, [B, L, C]
@@ -285,6 +284,7 @@ class GroupingBlock(nn.Module):
         x = self.norm_x(x)
         # [B, S_2, C]
         projected_group_tokens = self.project_group_token(group_tokens)
+        
         
         projected_group_tokens = self.pre_assign_attn(projected_group_tokens, x)
         
@@ -335,9 +335,10 @@ class Attention(nn.Module):
             assert key is None
             assert value is None
             x = query
-            B, N, C = x.shape
+            B, N, C = x.shape # [B, P + G, C]
             S = N
             # [3, B, nh, N, C//nh]
+
             qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
             # [B, nh, N, C//nh]
             q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
@@ -549,7 +550,6 @@ class GroupingLayer(nn.Module):
             prev_group_token (torch.Tensor): group tokens, [B, S_1, C]
             return_attn (bool): whether to return attention maps
         """
-        
         if self.with_group_token:
             group_token = self.group_token.expand(x.size(0), -1, -1)
             if self.group_projector is not None:
@@ -559,6 +559,7 @@ class GroupingLayer(nn.Module):
 
         B, L, C = x.shape
         cat_x = self.concat_x(x, group_token)
+        
         for blk_idx, blk in enumerate(self.blocks):
             if self.use_checkpoint:
                 cat_x = checkpoint.checkpoint(blk, cat_x)
@@ -963,12 +964,12 @@ class GroupViT(nn.Module):
 
     def forward_features(self, x, *, return_attn=False):
         B = x.shape[0]
-        x, hw_shape = self.patch_embed(x)
+        x, hw_shape = self.patch_embed(x) # [B, 196, 384]
 
         x = x + self.get_pos_embed(B, *hw_shape)
         x = self.pos_drop(x)
         
-        group_token = None
+        group_token = None # prev_group_token
         attn_dict_list = []
         for layer in self.layers:
             x, group_token, attn_dict = layer(x, group_token, return_attn=return_attn)
@@ -1014,10 +1015,6 @@ class GroupViT(nn.Module):
         
         if return_feat:
             outs.append(x_feat, name='feat')
-            
-            if return_fgbg:
-                outs.append(fg_feat, name='fg_feat')
-                outs.append(bg_feat, name='bg_feat')
 
         if return_attn:
             outs.append(attn_dicts, name='attn_dicts')

@@ -1,5 +1,5 @@
 data:
-  batch_size: 128 # it should be bigger than 16
+  batch_size: 32 # it should be bigger than 16
   pin_memory: true
   num_workers: 1
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
