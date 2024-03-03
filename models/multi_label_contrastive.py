@@ -14,6 +14,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
+import itertools
 
 from einops import rearrange, repeat
 from timm.loss import SoftTargetCrossEntropy
