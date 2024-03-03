@@ -106,6 +106,7 @@ def train(cfg):
     
     dataset_train, dataset_val, \
         data_loader_train, data_loader_val = build_loader(cfg.data)
+        
     data_loader_seg = build_seg_dataloader(build_seg_dataset(cfg.evaluate.seg))
 
     logger = get_logger()
@@ -151,8 +152,6 @@ def train(cfg):
             logger.info(f'mIoU of the network on the {len(data_loader_seg.dataset)} test images: {miou:.2f}%')
         if cfg.evaluate.eval_only:
             return
-
-    
 
     logger.info('Start training')
     start_time = time.time()
@@ -239,7 +238,7 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
         
         batch_size = config.data.batch_size
         losses = model(**samples)
-        
+        exit()
         loss, log_vars = parse_losses(losses)
         
         if config.train.accumulation_steps > 1:

@@ -19,6 +19,7 @@ import torch.nn as nn
 import dino.vision_transformer as vits
 from .builder import MODELS
 import torch.nn.functional as F
+import torch.distributed as dist
 
 @MODELS.register_module()
 class FoundModel(nn.Module):
@@ -75,7 +76,6 @@ class FoundModel(nn.Module):
         with torch.no_grad():
             # Encoder forward pass
             att = self.vit_encoder.get_last_selfattention(batch)
-            
             # Get decoder features
             feats = self.extract_feats(dims=att.shape, type_feats=self.enc_type_feats)
             feats = feats[:, 1:, :, :].reshape(att.shape[0], w_featmap, h_featmap, -1)
@@ -119,12 +119,12 @@ class FoundModel(nn.Module):
     def decoder_load_weights(self, weights_path):
         print(f"Loading model from weights {weights_path}.")
         # Load states
-        state_dict = torch.load(weights_path)
+        state_dict = torch.load(weights_path, map_location='cpu')
 
         # Decoder
         self.decoder.load_state_dict(state_dict["decoder"])
         self.decoder.eval()
-        self.decoder.cuda()
+        self.decoder.cuda(dist.get_rank())
 
 
     @torch.no_grad()

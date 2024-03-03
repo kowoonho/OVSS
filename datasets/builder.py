@@ -115,7 +115,7 @@ def warn_and_continue(exn):
 
 
 def build_dataset(is_train, config, distribute = True):
-    if config.imc and config.separate_aug:
+    if config.imc:
         img1_transform, img2_transform = build_img_transform(is_train, config.img_aug)
     else:
         img_transform = build_img_transform(is_train, config.img_aug)
@@ -147,7 +147,7 @@ def build_dataset(is_train, config, distribute = True):
     # yapf: disable
     if is_train:
 
-        if config.imc and config.separate_aug:
+        if config.imc:
             dataset = (
                 wds.WebDataset(tar_file_list, repeat=True, handler=warn_and_continue)
                 .shuffle(config.shuffle_buffer)
@@ -168,13 +168,13 @@ def build_dataset(is_train, config, distribute = True):
             
     else:
         # zero shot classification validation
-        if distribute:
+        if config.imc:
             dataset = (  # noqa
                 wds.WebDataset(tar_file_list, repeat=False, handler=warn_and_continue)
                 .shuffle(0)
                 .decode('pil', handler=warn_and_continue)
                 .rename(image='jpg;png;jpeg', target='cls', keep=False)
-                .map_dict(image=img_transform, target=ToDataContainer())
+                .map_dict(image=img1_transform, target=ToDataContainer())
                 .slice(dist.get_rank(), total_length, dist.get_world_size())
                 .with_length(total_length))
         
@@ -195,29 +195,29 @@ def build_dataset(is_train, config, distribute = True):
 def build_img_transform(is_train, config, with_dc=True):
 
     if config.separate_aug:
-        augmentation1 = [
+        augmentation1 = transforms.Compose([
             transforms.RandomResizedCrop(224, scale=config.img_scale),
             transforms.RandomApply([
                 transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)  # not strengthened
             ], p=0.8),
             transforms.RandomGrayscale(p=0.2),
-            transforms.RandomApply([GaussianBlur([.1, 2.])], p=1.0),
+            # transforms.RandomApply([GaussianBlur([.1, 2.])], p=1.0),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
-        ]
-        augmentation2 = [
+        ])
+        augmentation2 = transforms.Compose([
             transforms.RandomResizedCrop(224, scale=config.img_scale),
             transforms.RandomApply([
                 transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)  # not strengthened
             ], p=0.8),
             transforms.RandomGrayscale(p=0.2),
-            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.1),
-            transforms.RandomApply([Solarize()], p=0.2),
+            # transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.1),
+            # transforms.RandomApply([Solarize()], p=0.2),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
-        ]
+        ])
         if with_dc:
             augmentation1 = transforms.Compose([*augmentation1.transforms, ToDataContainer()])
             augmentation2 = transforms.Compose([*augmentation2.transforms, ToDataContainer()])
