@@ -61,13 +61,12 @@ except ImportError:
 
 def parse_args():
     parser = argparse.ArgumentParser('GroupViT training and evaluation script')
-    parser.add_argument('--cfg', type=str, default="/workspace/Code/OVSS/configs/groupvit_c3.yml", help='path to config file')
+    parser.add_argument('--cfg', type=str, required=True, help='path to config file')
     parser.add_argument('--opts', help="Modify config options by adding 'KEY=VALUE' list. ", default=None, nargs='+')
 
     # easy config modification
     parser.add_argument('--batch-size', type=int, help='batch size for single GPU')
     parser.add_argument('--resume', help='resume from checkpoint')
-
     parser.add_argument(
         '--amp-opt-level',
         type=str,
@@ -91,7 +90,6 @@ def parse_args():
 
 
 def train(cfg):
-    
     if cfg.wandb and dist.get_rank() == 0:
         import wandb
         wandb.init(
@@ -125,7 +123,7 @@ def train(cfg):
     model_without_ddp = model.module
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    # logger.info(f'number of params: {n_parameters}')
+    logger.info(f'number of params: {n_parameters}')
     lr_scheduler = build_scheduler(cfg.train, optimizer, len(data_loader_train))
 
     if cfg.checkpoint.auto_resume:
@@ -229,16 +227,20 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
     start = time.time()
     end = time.time()
     
+    empty_cache_time = 4
+    data_len = len(data_loader)
+    refresh_term = data_len // empty_cache_time
     
+    memory_refresh_idx = [refresh_term, refresh_term*2, refresh_term*3]
     
     
     for idx, samples in enumerate(data_loader):
+        gc.collect()
+        
         batch_size = config.data.batch_size
-        
         losses = model(**samples)
-        exit()
-        loss, log_vars = parse_losses(losses)
         
+        loss, log_vars = parse_losses(losses)
         
         if config.train.accumulation_steps > 1:
             loss = loss / config.train.accumulation_steps
@@ -304,6 +306,8 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
                 log_stat['iter/learning_rate'] = lr
                 wandb.log(log_stat)
                 
+        if idx in memory_refresh_idx:
+            torch.cuda.empty_cache()
 
     epoch_time = time.time() - start
     logger.info(f'EPOCH {epoch} training takes {datetime.timedelta(seconds=int(epoch_time))}')
@@ -419,7 +423,7 @@ def validate_seg(config, data_loader, model):
 
 def main():
     args = parse_args()
-    cfg = get_config(args, mode='debug')
+    cfg = get_config(args)
     
     if cfg.train.amp_opt_level != 'O0':
         assert amp is not None, 'amp not installed!'
@@ -451,9 +455,9 @@ def main():
         linear_scaled_min_lr = linear_scaled_min_lr * cfg.train.accumulation_steps
 
     with read_write(cfg):
-        # logger.info(f'Scale base_lr from {cfg.train.base_lr} to {linear_scaled_lr}')
-        # logger.info(f'Scale warmup_lr from {cfg.train.warmup_lr} to {linear_scaled_warmup_lr}')
-        # logger.info(f'Scale min_lr from {cfg.train.min_lr} to {linear_scaled_min_lr}')
+        logger.info(f'Scale base_lr from {cfg.train.base_lr} to {linear_scaled_lr}')
+        logger.info(f'Scale warmup_lr from {cfg.train.warmup_lr} to {linear_scaled_warmup_lr}')
+        logger.info(f'Scale min_lr from {cfg.train.min_lr} to {linear_scaled_min_lr}')
         cfg.train.base_lr = linear_scaled_lr
         cfg.train.warmup_lr = linear_scaled_warmup_lr
         cfg.train.min_lr = linear_scaled_min_lr
@@ -461,15 +465,15 @@ def main():
     if dist.get_rank() == 0:
         path = os.path.join(cfg.output, 'config.json')
         OmegaConf.save(cfg, path)
-        # logger.info(f'Full config saved to {path}')
+        logger.info(f'Full config saved to {path}')
 
     # log env info
     env_info_dict = collect_env()
     env_info = '\n'.join([f'{k}: {v}' for k, v in env_info_dict.items()])
     dash_line = '-' * 60 + '\n'
-    # logger.info('Environment info:\n' + dash_line + env_info + '\n' + dash_line)
+    logger.info('Environment info:\n' + dash_line + env_info + '\n' + dash_line)
 
-    # logger.info(f'Git hash: {get_git_hash(digits=7)}')
+    logger.info(f'Git hash: {get_git_hash(digits=7)}')
 
     # print config
     # logger.info(OmegaConf.to_yaml(cfg))

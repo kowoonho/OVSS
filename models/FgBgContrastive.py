@@ -607,7 +607,8 @@ class FgBgContrastive(nn.Module):
     def forward_train(self, image1, image2, text):
         image1_outs = self.encode_image(image1, return_attn=True, return_feat = True, as_dict=True)
         
-        image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
+        with torch.no_grad():
+            image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
         # [B, C]
         image_x1, image_x2 = (image1_outs['image_x'], image2_outs['image_x'])
         
@@ -620,7 +621,7 @@ class FgBgContrastive(nn.Module):
         fg_feat2, bg_feat2 = self.get_fgbg_feat(image2, image_feat2, attn_dicts2)
         
         fgbg_feat1 = torch.cat([fg_feat1, bg_feat1], dim=1)
-        fgbg_feat2 = torch.cat([fg_feat2, bg_feat2], dim=1).detach()
+        fgbg_feat2 = torch.cat([fg_feat2.detach(), bg_feat2.detach()], dim=1)
         
         text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
@@ -630,7 +631,7 @@ class FgBgContrastive(nn.Module):
         losses = self.loss(image_x1, text_x)
         losses_dict = dict(loss=losses)
         
-        losses_dict['fgbg_loss'] = self.fgbg_loss(fgbg_feat1, fgbg_feat2)
+        losses_dict['fgbg_loss'] = self.fgbg_loss(fgbg_feat1, fgbg_feat2.detach())
         
         if self.with_multi_label_loss:
             assert self.multi_label > 0 or self.key_label > 0

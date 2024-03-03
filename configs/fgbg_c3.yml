@@ -43,6 +43,7 @@ data:
       - imagenet
 
   img_aug:
+    separate_aug: true
     deit_aug: true
     img_size: 224
     img_scale: [0.08, 1.0]

@@ -46,6 +46,7 @@ from torchvision import transforms
 
 from .formatting import ToDataContainer
 from .tokenizer import SimpleTokenizer
+from .augmentation import GaussianBlur, Solarize
 
 
 def worker_init_fn(worker_id, num_workers, rank, seed):
@@ -114,7 +115,10 @@ def warn_and_continue(exn):
 
 
 def build_dataset(is_train, config, distribute = True):
-    img_transform = build_img_transform(is_train, config.img_aug)
+    if config.imc and config.separate_aug:
+        img1_transform, img2_transform = build_img_transform(is_train, config.img_aug)
+    else:
+        img_transform = build_img_transform(is_train, config.img_aug)
 
     text_transform = build_text_transform(is_train, config.text_aug)
     split = 'train' if is_train else 'val'
@@ -143,13 +147,13 @@ def build_dataset(is_train, config, distribute = True):
     # yapf: disable
     if is_train:
 
-        if config.imc:
+        if config.imc and config.separate_aug:
             dataset = (
                 wds.WebDataset(tar_file_list, repeat=True, handler=warn_and_continue)
                 .shuffle(config.shuffle_buffer)
                 .decode('pil', handler=warn_and_continue)
                 .rename(image1='jpg;png;jpeg', image2='jpg;png;jpeg', text='text;txt', keep=False, handler=warn_and_continue)
-                .map_dict(image1=img_transform, image2=img_transform, text=text_transform, handler=warn_and_continue)
+                .map_dict(image1=img1_transform, image2=img2_transform, text=text_transform, handler=warn_and_continue)
                 .with_length(total_length)
             )
         else:
@@ -190,49 +194,81 @@ def build_dataset(is_train, config, distribute = True):
 
 def build_img_transform(is_train, config, with_dc=True):
 
-    if not config.deit_aug:
+    if config.separate_aug:
+        augmentation1 = [
+            transforms.RandomResizedCrop(224, scale=config.img_scale),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=1.0),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
+        ]
+        augmentation2 = [
+            transforms.RandomResizedCrop(224, scale=config.img_scale),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.1),
+            transforms.RandomApply([Solarize()], p=0.2),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
+        ]
+        if with_dc:
+            augmentation1 = transforms.Compose([*augmentation1.transforms, ToDataContainer()])
+            augmentation2 = transforms.Compose([*augmentation2.transforms, ToDataContainer()])
+            
+        return augmentation1, augmentation2
+    
+    else:
+    
+        if not config.deit_aug:
+            if is_train:
+                transform = transforms.Compose([
+                    transforms.RandomResizedCrop(config.img_size, scale=config.img_scale),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
+                ])
+            else:
+                transform = transforms.Compose([
+                    transforms.Resize(config.img_size + 32),
+                    transforms.CenterCrop(config.img_size),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
+                ])
+
+            return transform
+
         if is_train:
-            transform = transforms.Compose([
-                transforms.RandomResizedCrop(config.img_size, scale=config.img_scale),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
-            ])
+            # this should always dispatch to transforms_imagenet_train
+            transform = create_transform(
+                input_size=config.img_size,
+                is_training=True,
+                color_jitter=config.color_jitter if config.color_jitter > 0 else None,
+                auto_augment=config.auto_augment if config.auto_augment != 'none' else None,
+                re_prob=config.re_prob,
+                re_mode=config.re_mode,
+                re_count=config.re_count,
+                interpolation=config.interpolation,
+            )
         else:
+            size = int((256 / 224) * config.img_size)
             transform = transforms.Compose([
-                transforms.Resize(config.img_size + 32),
+                transforms.Resize(size, interpolation=_pil_interp(config.interpolation)),
                 transforms.CenterCrop(config.img_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
             ])
 
+        if with_dc:
+            transform = transforms.Compose([*transform.transforms, ToDataContainer()])
+
         return transform
-
-    if is_train:
-        # this should always dispatch to transforms_imagenet_train
-        transform = create_transform(
-            input_size=config.img_size,
-            is_training=True,
-            color_jitter=config.color_jitter if config.color_jitter > 0 else None,
-            auto_augment=config.auto_augment if config.auto_augment != 'none' else None,
-            re_prob=config.re_prob,
-            re_mode=config.re_mode,
-            re_count=config.re_count,
-            interpolation=config.interpolation,
-        )
-    else:
-        size = int((256 / 224) * config.img_size)
-        transform = transforms.Compose([
-            transforms.Resize(size, interpolation=_pil_interp(config.interpolation)),
-            transforms.CenterCrop(config.img_size),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
-        ])
-
-    if with_dc:
-        transform = transforms.Compose([*transform.transforms, ToDataContainer()])
-
-    return transform
 
 
 def build_text_transform(is_train, config, with_dc=True, with_keyword=False):
