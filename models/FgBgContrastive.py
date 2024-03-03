@@ -246,47 +246,59 @@ class FgBgContrastive(nn.Module):
     
     def fgbg_loss(self, fgbg_feat1, fgbg_feat2):
 
-        # [B, 4, C]
-        fgbg_feat = torch.cat([fgbg_feat1, fgbg_feat2], dim=1)
-        
-        fgbg_feat = F.normalize(fgbg_feat, dim=-1)
+        # [B, 2, C]
+        fgbg_feat1 = F.normalize(fgbg_feat1, dim=-1)
+        fgbg_feat2 = F.normalize(fgbg_feat2, dim=-1)
         
         # [B, 4, 4]
-        dist_per_feat = fgbg_feat @ rearrange(fgbg_feat, 'b l c -> b c l')
+        # dist_per_feat = fgbg_feat @ rearrange(fgbg_feat, 'b l c -> b c l')
 
         if self.share_temperature:
             logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
         else:
             logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
 
-        B, L, _ = fgbg_feat.shape
+        B, L, _ = fgbg_feat1.shape
         
-        pattern = torch.tensor([[1,0,1,0],
-                                [0,1,0,1],
-                                [1,0,1,0],
-                                [0,1,0,1]], dtype=fgbg_feat.dtype, device=fgbg_feat.device)
+        pattern = torch.tensor([[1,0],
+                                [0,1]], dtype=fgbg_feat1.dtype, device=fgbg_feat1.device)
         
-        # [B, 4, 4]
+        # [B, 2, 2]
         pos_labels_batch = pattern.unsqueeze(0).repeat(B, 1, 1)
 
-        fgbg_x = rearrange(fgbg_feat, 'b l c -> (b l) c')
+        # [2B, C]
+        fgbg_x1 = rearrange(fgbg_feat1, 'b l c -> (b l) c')
+        fgbg_x2 = rearrange(fgbg_feat2, 'b l c -> (b l) c')
         
         # [4B, 4B*N] N : gpu_num
-        logits_per_feat = fgbg_x @ dist_collect(fgbg_x).t()
+        logits_per_x1 = fgbg_x1 @ dist_collect(fgbg_x2).t()
+        logits_per_x2 = fgbg_x2 @ dist_collect(fgbg_x1).t()
 
 
         # get label globally
         # [B, L1, B, L2, W]
-        global_labels = F.one_hot(
-            torch.ones(B, L, B, L, dtype=torch.long, device=fgbg_x.device) * dist.get_rank(),
-            num_classes=dist.get_world_size()).to(fgbg_x.dtype)
+        labels_per_x1 = F.one_hot(
+            torch.ones(B, L, B, L, dtype=torch.long, device=fgbg_x1.device) * dist.get_rank(),
+            num_classes=dist.get_world_size()).to(fgbg_x1.dtype)
         
-        global_labels *= rearrange(pos_labels_batch, 'b l1 l2 -> b l1 1 l2 1') * repeat(
-            torch.eye(B, dtype=fgbg_x.dtype, device=fgbg_x.device), 'b1 b2 -> b1 1 b2 1 1')
+        labels_per_x1 *= rearrange(pos_labels_batch, 'b l1 l2 -> b l1 1 l2 1') * repeat(
+            torch.eye(B, dtype=fgbg_x1.dtype, device=fgbg_x1.device), 'b1 b2 -> b1 1 b2 1 1')
         # [BxL1, WxBxL2]
-        global_labels = rearrange(global_labels, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
+        labels_per_x1 = rearrange(labels_per_x1, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
         
-        loss = self.soft_cross_entropy(logits_per_feat * logit_scale, global_labels)
+        labels_per_x2 = F.one_hot(
+            torch.ones(B, L, B, L, dtype=torch.long, device=fgbg_x2.device) * dist.get_rank(),
+            num_classes=dist.get_world_size()).to(fgbg_x2.dtype)
+        
+        labels_per_x2 *= rearrange(pos_labels_batch, 'b l1 l2 -> b l1 1 l2 1') * repeat(
+            torch.eye(B, dtype=fgbg_x2.dtype, device=fgbg_x2.device), 'b1 b2 -> b1 1 b2 1 1')
+        # [BxL1, WxBxL2]
+        labels_per_x2 = rearrange(labels_per_x2, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
+        
+        loss_x1 = self.soft_cross_entropy(logits_per_x1 * logit_scale, labels_per_x1)
+        loss_x2 = self.soft_cross_entropy(logits_per_x2 * logit_scale, labels_per_x2)
+        
+        loss = 0.5 * (loss_x1 + loss_x2)
         
         return loss
     
@@ -455,7 +467,7 @@ class FgBgContrastive(nn.Module):
             text = rearrange(text, 'b n l -> (b n) l', n=num_text)
             squeeze_dim = True
 
-        outs = Result(as_dict=True)
+        outs = Result(as_dict=as_dict)
         # [B, C]
         x = self.text_encoder(text)
         text_x = self.text_projector(x)
@@ -585,8 +597,8 @@ class FgBgContrastive(nn.Module):
         # [B, C]
         fg_feat, bg_feat = divide_group(image_feat, foreground_group_index)
         
-        fg_feat = self.fgbg_projector(fg_feat)
-        bg_feat = self.fgbg_projector(bg_feat)
+        # fg_feat = self.fgbg_projector(fg_feat)
+        # bg_feat = self.fgbg_projector(bg_feat)
         
         return fg_feat.unsqueeze(1), bg_feat.unsqueeze(1)
             
@@ -608,10 +620,9 @@ class FgBgContrastive(nn.Module):
         fg_feat2, bg_feat2 = self.get_fgbg_feat(image2, image_feat2, attn_dicts2)
         
         fgbg_feat1 = torch.cat([fg_feat1, bg_feat1], dim=1)
-        fgbg_feat2 = torch.cat([fg_feat2, bg_feat2], dim=1)
+        fgbg_feat2 = torch.cat([fg_feat2, bg_feat2], dim=1).detach()
         
-        
-        text_outs = self.encode_text(text, max_word=self.multi_label, key_label=self.key_label)
+        text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
         text_x = text_outs['text_x']
         

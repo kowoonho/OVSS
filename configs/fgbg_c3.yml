@@ -1,7 +1,7 @@
 data:
-  batch_size: 64 # it should be bigger than 16
+  batch_size: 128 # it should be bigger than 16
   pin_memory: true
-  num_workers: 4
+  num_workers: 8
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -62,7 +62,7 @@ data:
 
 train:
   start_epoch: 0
-  epochs: 40
+  epochs: 30
   warmup_epochs: 2
   base_lr: 1.6e-3
   weight_decay: 0.05
