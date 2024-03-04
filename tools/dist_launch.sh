@@ -9,11 +9,7 @@
 #
 # Written by Jiarui Xu
 # -------------------------------------------------------------------------
-<<<<<<< HEAD
-export CUDA_VISIBLE_DEVICES=5,6,7,8
-=======
-export CUDA_VISIBLE_DEVICES=4
->>>>>>> c136b7659e8bf603464894b2e19df0507fc25923
+# export CUDA_VISIBLE_DEVICES=5,6,7,8
 # export OMP_NUM_THREADS=2
 
 SCRIPT=$1
