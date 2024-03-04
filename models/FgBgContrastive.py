@@ -16,14 +16,12 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 import itertools
-from sklearn.cluster import KMeans
 
 from einops import rearrange, repeat
 from timm.loss import SoftTargetCrossEntropy
 
 from .builder import MODELS
 from .misc import Result
-from sklearn.cluster import KMeans
 from utility.myutils import get_attn_map, group_matching, select_foreground_groups, divide_group
 
 
@@ -270,10 +268,9 @@ class FgBgContrastive(nn.Module):
         fgbg_x1 = rearrange(fgbg_feat1, 'b l c -> (b l) c')
         fgbg_x2 = rearrange(fgbg_feat2, 'b l c -> (b l) c')
         
-        # [4B, 4B*N] N : gpu_num
+        # [2B, 2B*N] N : gpu_num
         logits_per_x1 = fgbg_x1 @ dist_collect(fgbg_x2).t()
         logits_per_x2 = fgbg_x2 @ dist_collect(fgbg_x1).t()
-
 
         # get label globally
         # [B, L1, B, L2, W]
@@ -297,7 +294,7 @@ class FgBgContrastive(nn.Module):
         
         loss_x1 = self.soft_cross_entropy(logits_per_x1 * logit_scale, labels_per_x1)
         loss_x2 = self.soft_cross_entropy(logits_per_x2 * logit_scale, labels_per_x2)
-        
+
         loss = 0.5 * (loss_x1 + loss_x2)
         
         return loss
@@ -592,13 +589,13 @@ class FgBgContrastive(nn.Module):
             # [B, 1, H, W]
             saliency_map = self.saliency_encoder.get_binary_result(image)
         
-        foreground_group_index = select_foreground_groups(group_result, saliency_map)
+            foreground_group_index = select_foreground_groups(group_result, saliency_map)
 
         # [B, C]
         fg_feat, bg_feat = divide_group(image_feat, foreground_group_index)
         
-        # fg_feat = self.fgbg_projector(fg_feat)
-        # bg_feat = self.fgbg_projector(bg_feat)
+        fg_feat = self.fgbg_projector(fg_feat)
+        bg_feat = self.fgbg_projector(bg_feat)
         
         return fg_feat.unsqueeze(1), bg_feat.unsqueeze(1)
             
@@ -607,8 +604,7 @@ class FgBgContrastive(nn.Module):
     def forward_train(self, image1, image2, text):
         image1_outs = self.encode_image(image1, return_attn=True, return_feat = True, as_dict=True)
         
-        with torch.no_grad():
-            image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
+        image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
         # [B, C]
         image_x1, image_x2 = (image1_outs['image_x'], image2_outs['image_x'])
         
@@ -621,7 +617,7 @@ class FgBgContrastive(nn.Module):
         fg_feat2, bg_feat2 = self.get_fgbg_feat(image2, image_feat2, attn_dicts2)
         
         fgbg_feat1 = torch.cat([fg_feat1, bg_feat1], dim=1)
-        fgbg_feat2 = torch.cat([fg_feat2.detach(), bg_feat2.detach()], dim=1)
+        fgbg_feat2 = torch.cat([fg_feat2, bg_feat2], dim=1)
         
         text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]

@@ -117,12 +117,13 @@ def select_foreground_groups(group_result, saliency_map, threshold=0.5):
     
     overlap_area = overlap.sum(dim=[2, 3])
     group_area = group_result.sum(dim=[2, 3])
-    overlap_ratio = overlap_area / group_area
+    
+    overlap_ratio = overlap_area / (group_area - 1e-8) # prevent division by zero
 
     foreground_groups = (overlap_ratio >= threshold)
     
     # nan value replaced
-    overlap_ratio = torch.where(torch.isnan(overlap_ratio), torch.tensor(float('-inf'), device=overlap_ratio.device), overlap_ratio)
+    # overlap_ratio = torch.where(torch.isnan(overlap_ratio), torch.tensor(float('-inf'), device=overlap_ratio.device), overlap_ratio)
     _, max_overlap_indices = torch.max(overlap_ratio, dim=1)
     
     max_one_hot_indices = F.one_hot(max_overlap_indices, num_classes=G).bool()
@@ -134,17 +135,23 @@ def select_foreground_groups(group_result, saliency_map, threshold=0.5):
 def divide_group(groups_feat, foreground_group_index):
     B, G, C = groups_feat.shape
     
-    fg_mask = foreground_group_index.bool()
-    bg_mask = ~fg_mask
+    fg_mask = foreground_group_index
+    bg_mask = 1 - fg_mask
     
-    foreground_features = torch.where(fg_mask.unsqueeze(-1), groups_feat, 
-                                      torch.tensor(0., dtype=groups_feat.dtype, device=groups_feat.device))
-    
+    foreground_features = fg_mask.unsqueeze(-1).expand(-1, -1, C) * groups_feat
     fg_feat = foreground_features.sum(dim=1) / fg_mask.sum(dim=1, keepdim=True)
     
-    background_features = torch.where(bg_mask.unsqueeze(-1), groups_feat, 
-                                      torch.tensor(0., dtype=groups_feat.dtype, device=groups_feat.device))
+    background_features = bg_mask.unsqueeze(-1).expand(-1, -1, C) * groups_feat
     bg_feat = background_features.sum(dim=1) / bg_mask.sum(dim=1, keepdim=True)
+    
+    # foreground_features = torch.where(fg_mask.unsqueeze(-1), groups_feat, 
+    #                                   torch.tensor(0., dtype=groups_feat.dtype, device=groups_feat.device))
+    
+    # fg_feat = foreground_features.sum(dim=1) / fg_mask.sum(dim=1, keepdim=True)
+    
+    # background_features = torch.where(bg_mask.unsqueeze(-1), groups_feat, 
+    #                                   torch.tensor(0., dtype=groups_feat.dtype, device=groups_feat.device))
+    # bg_feat = background_features.sum(dim=1) / bg_mask.sum(dim=1, keepdim=True)
     
     return fg_feat, bg_feat
 

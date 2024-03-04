@@ -424,7 +424,7 @@ class MultiLabelContrastive(nn.Module):
         outs = Result(as_dict=as_dict)
         # [B, C]
         x = self.text_encoder(text)
-        text_x = self.text_projector(x['text_x'])
+        text_x = self.text_projector(x)
             
         outs.append(text_x, 'text_x')
         if squeeze_dim:
