@@ -211,7 +211,6 @@ def train(cfg):
 
 def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
     # detect NaN loss
-    torch.autograd.set_detect_anomaly(True)
     
     logger = get_logger()
     dist.barrier()

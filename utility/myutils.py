@@ -117,12 +117,13 @@ def select_foreground_groups(group_result, saliency_map, threshold=0.5):
     
     overlap_area = overlap.sum(dim=[2, 3])
     group_area = group_result.sum(dim=[2, 3])
-    overlap_ratio = overlap_area / group_area
+    
+    overlap_ratio = overlap_area / (group_area - 1e-8) # prevent division by zero
 
     foreground_groups = (overlap_ratio >= threshold)
     
     # nan value replaced
-    overlap_ratio = torch.where(torch.isnan(overlap_ratio), torch.tensor(float('-inf'), device=overlap_ratio.device), overlap_ratio)
+    # overlap_ratio = torch.where(torch.isnan(overlap_ratio), torch.tensor(float('-inf'), device=overlap_ratio.device), overlap_ratio)
     _, max_overlap_indices = torch.max(overlap_ratio, dim=1)
     
     max_one_hot_indices = F.one_hot(max_overlap_indices, num_classes=G).bool()
