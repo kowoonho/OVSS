@@ -139,12 +139,14 @@ def divide_group(groups_feat, foreground_group_index):
     bg_mask = 1 - fg_mask
     
     foreground_features = fg_mask.unsqueeze(-1).expand(-1, -1, C) * groups_feat
+    
     fg_feat = foreground_features.sum(dim=1) / fg_mask.sum(dim=1, keepdim=True)
     
     background_features = bg_mask.unsqueeze(-1).expand(-1, -1, C) * groups_feat
     bg_feat = background_features.sum(dim=1) / bg_mask.sum(dim=1, keepdim=True)
     
-    # foreground_features = torch.where(fg_mask.unsqueeze(-1), groups_feat, 
+    
+    # foreground_features = torch.where(fg_mask.bool().unsqueeze(-1), groups_feat, 
     #                                   torch.tensor(0., dtype=groups_feat.dtype, device=groups_feat.device))
     
     # fg_feat = foreground_features.sum(dim=1) / fg_mask.sum(dim=1, keepdim=True)

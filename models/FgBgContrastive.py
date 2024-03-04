@@ -604,7 +604,8 @@ class FgBgContrastive(nn.Module):
     def forward_train(self, image1, image2, text):
         image1_outs = self.encode_image(image1, return_attn=True, return_feat = True, as_dict=True)
         
-        image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
+        with torch.no_grad():
+            image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
         # [B, C]
         image_x1, image_x2 = (image1_outs['image_x'], image2_outs['image_x'])
         
