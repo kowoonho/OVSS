@@ -238,8 +238,18 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
         
         batch_size = config.data.batch_size
         losses = model(**samples)
-        exit()
         loss, log_vars = parse_losses(losses)
+        
+        if torch.isnan(loss) == False:
+            loss_meter.update(loss.item(), batch_size)
+        
+            for loss_name in log_vars:
+                log_vars_meters[loss_name].update(log_vars[loss_name], batch_size)
+
+        else:
+            logger.info("\nSkip this iteration, because of nan loss value!\n")
+            
+            continue
         
         if config.train.accumulation_steps > 1:
             loss = loss / config.train.accumulation_steps
@@ -275,15 +285,13 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
                     grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.train.clip_grad)
                 else:
                     grad_norm = get_grad_norm(model.parameters())
+                    
             optimizer.step()
             lr_scheduler.step_update(epoch * num_steps + idx)
-
         torch.cuda.synchronize()
 
-        loss_meter.update(loss.item(), batch_size)
-        for loss_name in log_vars:
-            log_vars_meters[loss_name].update(log_vars[loss_name], batch_size)
         norm_meter.update(grad_norm)
+        
         batch_time.update(time.time() - end)
         end = time.time()
 
