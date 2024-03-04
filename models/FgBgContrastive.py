@@ -272,7 +272,6 @@ class FgBgContrastive(nn.Module):
         logits_per_x1 = fgbg_x1 @ dist_collect(fgbg_x2).t()
         logits_per_x2 = fgbg_x2 @ dist_collect(fgbg_x1).t()
 
-
         # get label globally
         # [B, L1, B, L2, W]
         labels_per_x1 = F.one_hot(

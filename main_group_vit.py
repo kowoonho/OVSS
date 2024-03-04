@@ -51,6 +51,7 @@ from utility import (auto_resume_helper, build_dataset_class_tokens, build_optim
 from metric.evaluate import evalutate
 
 import gc
+import pdb
 
 try:
     # noinspection PyUnresolvedReferences
@@ -209,6 +210,9 @@ def train(cfg):
 
 
 def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
+    # detect NaN loss
+    torch.autograd.set_detect_anomaly(True)
+    
     logger = get_logger()
     dist.barrier()
     model.train()
@@ -271,7 +275,10 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
                 else:
                     grad_norm = get_grad_norm(amp.master_params(optimizer))
             else:
-                loss.backward()
+                try:
+                    loss.backward()
+                except Exception as err:
+                    pdb.set_trace()
                 if config.train.clip_grad:
                     grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.train.clip_grad)
                 else:

@@ -120,11 +120,13 @@ class FoundModel(nn.Module):
         print(f"Loading model from weights {weights_path}.")
         # Load states
         state_dict = torch.load(weights_path, map_location='cpu')
+        # state_dict = torch.load(weights_path)
 
         # Decoder
         self.decoder.load_state_dict(state_dict["decoder"])
         self.decoder.eval()
         self.decoder.cuda(dist.get_rank())
+        # self.decoder.cuda()
 
 
     @torch.no_grad()
