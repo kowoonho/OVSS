@@ -51,6 +51,7 @@ from utility import (auto_resume_helper, build_dataset_class_tokens, build_optim
 from metric.evaluate import evalutate
 
 import gc
+import pdb
 
 try:
     # noinspection PyUnresolvedReferences
@@ -106,7 +107,6 @@ def train(cfg):
     
     dataset_train, dataset_val, \
         data_loader_train, data_loader_val = build_loader(cfg.data)
-        
     data_loader_seg = build_seg_dataloader(build_seg_dataset(cfg.evaluate.seg))
 
     logger = get_logger()
@@ -152,6 +152,8 @@ def train(cfg):
             logger.info(f'mIoU of the network on the {len(data_loader_seg.dataset)} test images: {miou:.2f}%')
         if cfg.evaluate.eval_only:
             return
+
+    
 
     logger.info('Start training')
     start_time = time.time()
@@ -208,6 +210,8 @@ def train(cfg):
 
 
 def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
+    # detect NaN loss
+    
     logger = get_logger()
     dist.barrier()
     model.train()
@@ -238,8 +242,8 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
         
         batch_size = config.data.batch_size
         losses = model(**samples)
-        loss, log_vars = parse_losses(losses)
         
+        loss, log_vars = parse_losses(losses)
         if torch.isnan(loss) == False:
             loss_meter.update(loss.item(), batch_size)
         
@@ -248,8 +252,9 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
 
         else:
             logger.info("\nSkip this iteration, because of nan loss value!\n")
-            
-            continue
+            print(log_vars)
+            exit()
+        
         
         if config.train.accumulation_steps > 1:
             loss = loss / config.train.accumulation_steps
@@ -280,18 +285,20 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
                 else:
                     grad_norm = get_grad_norm(amp.master_params(optimizer))
             else:
-                loss.backward()
+                try:
+                    loss.backward()
+                except Exception as err:
+                    pdb.set_trace()
                 if config.train.clip_grad:
                     grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.train.clip_grad)
                 else:
                     grad_norm = get_grad_norm(model.parameters())
-                    
             optimizer.step()
             lr_scheduler.step_update(epoch * num_steps + idx)
+
         torch.cuda.synchronize()
 
         norm_meter.update(grad_norm)
-        
         batch_time.update(time.time() - end)
         end = time.time()
 

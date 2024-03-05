@@ -115,6 +115,7 @@ def select_foreground_groups(group_result, saliency_map, threshold=0.5):
     
     overlap = group_result * saliency_map
     
+    # [B, G]
     overlap_area = overlap.sum(dim=[2, 3])
     group_area = group_result.sum(dim=[2, 3])
     
@@ -123,24 +124,26 @@ def select_foreground_groups(group_result, saliency_map, threshold=0.5):
     foreground_groups = (overlap_ratio >= threshold)
     
     # nan value replaced
-    # overlap_ratio = torch.where(torch.isnan(overlap_ratio), torch.tensor(float('-inf'), device=overlap_ratio.device), overlap_ratio)
     _, max_overlap_indices = torch.max(overlap_ratio, dim=1)
     
-    # _, min_overlap_indices = torch.min(overlap_ratio, dim=1)
+    _, min_overlap_indices = torch.min(overlap_ratio, dim=1)
     
     max_one_hot_indices = F.one_hot(max_overlap_indices, num_classes=G).bool()
-    # min_one_hot_indices = ~(F.one_hot(min_overlap_indices, num_classes=G).bool())
+    min_one_hot_indices = ~(F.one_hot(min_overlap_indices, num_classes=G).bool())
     
-    # foreground_groups = ((foreground_groups | max_one_hot_indices) & min_one_hot_indices).float()
-    foreground_groups = (foreground_groups | max_one_hot_indices).float()
-    # index = (torch.where(foreground_groups.sum(dim=1) == 0))[0]
-    # is_empty = index.numel() == 0
+    foreground_groups = ((foreground_groups | max_one_hot_indices) & min_one_hot_indices)
     
-    # if not is_empty:
-    #     print(overlap_ratio[index.item()])
-    #     print(overlap_area[index.item()])
-    #     print(group_area[index.item()])
+    # [B, G]
+    all_zero_rows = (foreground_groups.sum(dim=1) == 0).unsqueeze(1).expand(-1, G)
     
+    # [B, G]
+    valid_group_areas = group_area > 0
+    
+    _, rand_index = torch.max(valid_group_areas, dim=1)
+    rand_one_hot_indices = F.one_hot(rand_index, num_classes = G).bool()
+    
+
+    foreground_groups = (foreground_groups | (all_zero_rows & rand_one_hot_indices)).float()
     return foreground_groups
 
 def divide_group(groups_feat, foreground_group_index):
