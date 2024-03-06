@@ -7,6 +7,7 @@ import torch
 from segmentation.evaluation.group_vit_seg import resize_attn_map
 from einops import rearrange
 import torch.nn.functional as F
+import math
 
 
 def extract_keyword(total_text, max_word=3):
@@ -159,17 +160,13 @@ def divide_group(groups_feat, foreground_group_index):
     background_features = bg_mask.unsqueeze(-1).expand(-1, -1, C) * groups_feat
     bg_feat = background_features.sum(dim=1) / bg_mask.sum(dim=1, keepdim=True)
     
-    
-    # foreground_features = torch.where(fg_mask.bool().unsqueeze(-1), groups_feat, 
-    #                                   torch.tensor(0., dtype=groups_feat.dtype, device=groups_feat.device))
-    
-    # fg_feat = foreground_features.sum(dim=1) / fg_mask.sum(dim=1, keepdim=True)
-    
-    # background_features = torch.where(bg_mask.unsqueeze(-1), groups_feat, 
-    #                                   torch.tensor(0., dtype=groups_feat.dtype, device=groups_feat.device))
-    # bg_feat = background_features.sum(dim=1) / bg_mask.sum(dim=1, keepdim=True)
-    
     return fg_feat, bg_feat
+
+
+def adjust_moco_momentum(epoch, total_epoch=30, momentum=0.99):
+    """Adjust moco momentum based on current epoch"""
+    m = 1. - 0.5 * (1. + math.cos(math.pi * epoch / total_epoch)) * (1. - momentum)
+    return m
 
     
     

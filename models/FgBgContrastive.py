@@ -98,17 +98,19 @@ class FgBgContrastive(nn.Module):
                  share_temperature=False,
                  multi_label_loss_weight=1.0,
                  with_multi_label_loss=False,
-                 with_key_token=False,
-                 with_hard_negative_sample=False,
-                 with_key_label=False,
-                 K=16):
+                 network_style='MoCo',
+                 ):
         super().__init__()
 
-        self.img_encoder = MODELS.build(img_encoder)
+        self.base_encoder = MODELS.build(img_encoder)
         self.text_encoder = MODELS.build(text_encoder)
         self.saliency_encoder = MODELS.build(saliency_encoder)
         self.saliency_encoder.decoder_load_weights(weights_path=saliency_decoder_weight)
         self.saliency_encoder.eval()
+        
+        if network_style == 'MoCo':
+            self.momentum_encoder = MODELS.build(img_encoder)
+        
         
         
         self.contrast_temperature = contrast_temperature
@@ -120,14 +122,11 @@ class FgBgContrastive(nn.Module):
         self.multi_label = multi_label
         self.key_label = key_label
         self.with_multi_label_loss = with_multi_label_loss
-        self.with_key_token = with_key_token
-        self.with_hard_negative_sample = with_hard_negative_sample
-        self.with_key_label = with_key_label
-        self.K = K
+        self.network_style = network_style
         
         if proj_num_layers > 0:
             self.img_projector = ProjectMLP(
-                in_dim=self.img_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
+                in_dim=self.base_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
             self.text_projector = ProjectMLP(
                 in_dim=self.text_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
             self.img_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.img_projector)
@@ -299,152 +298,31 @@ class FgBgContrastive(nn.Module):
         
         return loss
     
-    def hard_label_loss(self, image_feat, text_multi_label_feat):
+    def get_fgbg_feat(self, image, image_feat, attn_dicts):
         
-        B, G, C = image_feat.shape
-        hard_label = self.make_hard_label(image_feat, text_multi_label_feat)
-        image_feat = F.normalize(image_feat, dim=-1)
-
-        
-        if self.share_temperature:
-            logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
-        else:
-            logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
+        with torch.no_grad():
+            # [B, G, H, W]
+            group_result = group_matching(image, attn_dicts)
             
-        image_x = rearrange(image_feat, 'b l c -> (b l) c')
+            # [B, 1, H, W]
+            saliency_map = self.saliency_encoder.get_binary_result(image)
+        
+            foreground_group_index = select_foreground_groups(group_result, saliency_map)
 
-        logits_per_groups = image_x @ dist_collect(image_x).t()
-        labels_per_groups = F.one_hot(
-            torch.ones(B, G, B, G, dtype=torch.long, device=image_x.device) * dist.get_rank(),
-            num_classes=dist.get_world_size()).to(image_x.dtype)
+        # [B, C]
+        fg_feat, bg_feat = divide_group(image_feat, foreground_group_index)
         
-        labels_per_groups *= rearrange(hard_label, 'b l1 l2 -> b l1 1 l2 1') * repeat(
-            torch.eye(B, dtype=image_x.dtype, device=image_x.device), 'b1 b2 -> b1 1 b2 1 1')
-        # [BxL1, WxBxL2]
-        labels_per_groups = rearrange(labels_per_groups, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
+        fg_feat = self.fgbg_projector(fg_feat)
+        bg_feat = self.fgbg_projector(bg_feat)
         
-        hard_loss = self.soft_cross_entropy(logits_per_groups * logit_scale, labels_per_groups)
+        fgbg_feat = torch.cat([fg_feat.unsqueeze(1), bg_feat.unsqueeze(1)], dim=1)
         
-        return hard_loss
-         
-    def key_token_loss(self, pos_feat, neg_feat, anchor_feat):
-        
-        B = anchor_feat.shape[0]
-        
-        # [B, 2, C]
-        pn_feat = torch.cat([pos_feat, neg_feat], dim=1)
-        
-        # [B, 2, C]
-        pn_feat = F.normalize(pn_feat, dim=-1)
-        
-        # [B, 1, C]
-        anchor_feat = F.normalize(anchor_feat, dim=-1)
-        
-        # [B, 1, 2]
-        dist_per_anchor = anchor_feat @ rearrange(pn_feat, 'b l c -> b c l') 
-        # [B, 2, 1]
-        dist_per_pn = pn_feat @ rearrange(anchor_feat, 'b l c -> b c l') 
-        
-        if self.share_temperature:
-            logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
-        else:
-            logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
-            
-        
-        
-        # [B, 2, 1]
-        pos_labels_pn = rearrange(torch.ones_like(dist_per_anchor), 'b l2 l1 -> b l1 l2')
-        pos_labels_pn[:,1,:] = 0.
-        # [B, 1, 2]
-        pos_labels_anchor = rearrange(torch.ones_like(dist_per_pn), 'b l1 l2 -> b l2 l1')
-        pos_labels_anchor[:, :, 1] = 0.
-        
-        pn_x = rearrange(pn_feat, 'b l c -> (b l) c')
-        anchor_x = rearrange(anchor_feat, 'b l c -> (b l) c')
-        
-        logits_per_pn = pn_x @ dist_collect(anchor_x).t()
-        logits_per_anchor = anchor_x @ dist_collect(pn_x).t()
-        
-        # get label globally
-        # [B, 2, B, 1, W]
-        labels_per_pn = F.one_hot(
-            torch.ones(B, 2, B, 1, dtype=torch.long, device=pn_x.device) * dist.get_rank(),
-            num_classes=dist.get_world_size()).to(pn_x.dtype)
-        
-        labels_per_pn *= rearrange(pos_labels_pn, 'b l1 l2 -> b l1 1 l2 1') * repeat(
-            torch.eye(B, dtype=pn_x.dtype, device=pn_x.device), 'b1 b2 -> b1 1 b2 1 1')
-        # [BxL1, WxBxL2]
-        labels_per_pn = rearrange(labels_per_pn, 'b1 l1 b2 l2 w -> (b1 l1) (w b2 l2)')
-        # [B, 1, B, 2, W]
-        labels_per_anchor = F.one_hot(
-            torch.ones(B, 1, B, 2, dtype=torch.long, device=anchor_x.device) * dist.get_rank(),
-            num_classes=dist.get_world_size()).to(anchor_x.dtype)
-        labels_per_anchor *= rearrange(pos_labels_anchor, 'b l2 l1 -> b l2 1 l1 1') * repeat(
-            torch.eye(B, dtype=anchor_x.dtype, device=anchor_x.device), 'b2 b1 -> b2 1 b1 1 1')
-        # [BxL2, WxBxL1]
-        labels_per_anchor = rearrange(labels_per_anchor, 'b2 l2 b1 l1 w -> (b2 l2) (w b1 l1)')
-        
-        loss_pn = self.soft_cross_entropy(logits_per_pn * logit_scale, labels_per_pn)
-        loss_anchor = self.soft_cross_entropy(logits_per_anchor * logit_scale, labels_per_anchor)
-
-        loss = 0.5 * (loss_pn + loss_anchor)
-        return loss
-        
-    
-    def multi_label_key_loss(self, key_feat, nonkey_feat, multi_label_text_feat):
-        key_loss = 0
-        text_len = multi_label_text_feat.shape[1]
-        for i in range(text_len):
-            key_loss += self.key_token_loss(pos_feat=key_feat[:,i,:].unsqueeze(1), 
-                                            neg_feat=nonkey_feat[:,i,:].unsqueeze(1),
-                                            anchor_feat=multi_label_text_feat[:,i,:].unsqueeze(1))
-        return key_loss / (text_len)
-    
-    def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.8):
-        B, G, C = image_feat.shape
-        _, T, _ = text_multi_label_feat.shape
-        
-        image_feat = F.normalize(image_feat, dim=-1)
-        text_feat = F.normalize(text_multi_label_feat, dim=-1)
-        
-        token_score = image_feat @ rearrange(text_feat, 'b l c -> b c l') # [B, G, T]
-        
-        token_score = F.normalize(token_score, dim=-1)
-        
-        token_score = F.softmax(token_score, dim=-1)
-        
-        threshold_mask = token_score >= threshold
-        
-        _, indices = torch.max(token_score, dim=2)
-        
-        _, max_indices = torch.max(token_score, dim=1)
-        
-        forced_selection_mask = rearrange(F.one_hot(max_indices, num_classes=G), 'b l g -> b g l')
-        
-        one_hot_indices = F.one_hot(indices, num_classes=T)
-        
-        final_mask = (one_hot_indices & threshold_mask) | forced_selection_mask
-        
-        expanded_one_hot = final_mask.unsqueeze(-1).expand(-1, -1, -1, C)
-        expanded_image_feat = image_feat.unsqueeze(2).expand(-1, -1, T, -1)
-        
-        key_masked_sum = (expanded_one_hot * expanded_image_feat).sum(dim=1)
-        nonkey_masked_sum = ((1-expanded_one_hot) * expanded_image_feat).sum(dim=1)
-        
-        key_masked_count = (expanded_one_hot.sum(dim=1)).clamp(min=1)
-        nonkey_masked_count = ((1-expanded_one_hot).sum(dim=1)).clamp(min=1)
-        
-        
-        key_feat = key_masked_sum / key_masked_count
-        
-        nonkey_feat = nonkey_masked_sum / nonkey_masked_count
-        
-        return key_feat, nonkey_feat
+        return fgbg_feat
 
         
-    def encode_image(self, image, *, return_attn=False, return_feat=False, as_dict=False):
+    def encode_image(self, image, *, encoder=None, return_attn=False, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, return_attn=return_attn, return_feat=return_feat, as_dict=True)
+        img_outs = encoder(image, return_attn=return_attn, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         
@@ -484,148 +362,53 @@ class FgBgContrastive(nn.Module):
 
         return outs.as_return()
     
-    def make_hard_label(self, image_feat, text_multi_label_feat):
-        B, G, C = image_feat.shape
-        _, T, _ = text_multi_label_feat.shape
-        
-        image_feat = F.normalize(image_feat, dim=-1)
-        text_feat = F.normalize(text_multi_label_feat, dim=-1)
-        
-        group_token_score = image_feat @ rearrange(image_feat, 'b l c -> b c l')
-        mask = 1 - torch.eye(8, device=image_feat.device)
-        group_token_score = group_token_score * mask
-        
-        text_score = image_feat @ rearrange(text_feat, 'b l c -> b c l')
-        
-        group_final_score = torch.zeros_like(group_token_score)
-        
-        group_one_hot = self.gumbel_softmax(group_token_score, tau=0.5, dim=2)
-        _, group_indices = torch.max(group_one_hot, dim=2)
-        
-        group_final_score.scatter_(1, group_indices.unsqueeze(1), 1)
-        
-        group_final_score = (group_final_score.bool() | group_final_score.transpose(1,2).bool()).float()
-        
-        text_one_hot = self.gumbel_softmax(text_score, tau=0.5, dim=2)
-        _, text_indices = torch.max(text_one_hot, dim=2)
-        
-        
-        text_label = (text_indices.unsqueeze(2) == text_indices.unsqueeze(1)).float()
-        
-        text_label = text_label - torch.eye(8, dtype=text_label.dtype, device=text_label.device)
-        final_label = (group_final_score * text_label) + torch.eye(8, dtype=text_label.dtype, device=text_label.device)
-        return final_label
-        
-    def select_keyword(self, texts):
-        B, T, C = texts.shape
-        
-        texts = texts.reshape(-1, C)
-
-        
-        kmeans = KMeans(n_clusters=self.K, max_iter=100).fit(text_embs.cpu().detach().numpy())
-        
-        distances = np.sqrt(((text_embs.cpu().detach().numpy() - kmeans.cluster_centers_[:, np.newaxis])**2).sum(axis=2))
-        
-        closest_data_points = np.argmin(distances, axis = 1)
-        
-        return texts[closest_data_points]
-    
-    def key_label_loss(self, image_feat, key_text_feat):
-        
-        B, G, C = image_feat.shape
-        K, C = key_text_feat.shape
-        
-        key_label = self.make_key_label(image_feat, key_text_feat)
-        
-        image_feat = image_feat.reshape(-1, C)
-        
-        image_feat = F.normalize(image_feat, dim=-1)
-        
-        if self.share_temperature:
-            logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
-        else:
-            logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
-            
-        
-        logits_per_groups = image_feat @ image_feat.t()
-        
-        logits_per_groups = dist_collect(logits_per_groups)
-        key_label = dist_collect(key_label)
-        
-        
-        loss = self.soft_cross_entropy(logits_per_groups * logit_scale, key_label) / B
-        
-        return loss
-    
-    def make_key_label(self, image_feat, key_text_feat):
-        B, G, C = image_feat.shape
-        K, C = key_text_feat.shape
-        
-        # [B*G, C]
-        image_feat = image_feat.reshape(-1, C)
-        
-        M, _ = image_feat.shape
-        
-        image_feat = F.normalize(image_feat, dim=-1)
-        key_text_feat = F.normalize(key_text_feat, dim=-1)
-        
-        token_score = image_feat @ key_text_feat.t()
-        
-        _, max_indices = torch.max(token_score, dim=1, keepdim=True)
-        
-        max_indices_squeezed = max_indices.squeeze(1)
-        
-        group_similar_label = (max_indices_squeezed[:, None] == max_indices_squeezed).long()
-        
-        return group_similar_label
-
-
-    def get_fgbg_feat(self, image, image_feat, attn_dicts):
+    def StopGradEncoder(self, x1, x2):
+        x1_outs = self.encode_image(x1, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
         
         with torch.no_grad():
-            # [B, G, H, W]
-            group_result = group_matching(image, attn_dicts)
-            
-            # [B, 1, H, W]
-            saliency_map = self.saliency_encoder.get_binary_result(image)
-        
-            foreground_group_index = select_foreground_groups(group_result, saliency_map)
+            x2_outs = self.encode_image(x2, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
 
-        # [B, C]
-        fg_feat, bg_feat = divide_group(image_feat, foreground_group_index)
+        image_x1, image_x2 = (x1_outs['image_x'], x2_outs['image_x'])
+        attn_dicts1, attn_dicts2 = (x1_outs['attn_dicts'], x2_outs['attn_dicts'])
+        image_feat1, image_feat2 = (x1_outs['image_feat'], x2_outs['image_feat'])
         
-        fg_feat = self.fgbg_projector(fg_feat)
-        bg_feat = self.fgbg_projector(bg_feat)
+        fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
+        fgbg_feat2 = self.get_fgbg_feat(x2, image_feat2, attn_dicts2)
         
-        return fg_feat.unsqueeze(1), bg_feat.unsqueeze(1)
-            
-            
+        return image_x1, image_x2, fgbg_feat1, fgbg_feat2
+    
+    def MomentumEncoder(self, x1, x2, m):
+        x1_outs = self.encode_image(x1, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
         
-    def forward_train(self, image1, image2, text):
-        image1_outs = self.encode_image(image1, return_attn=True, return_feat = True, as_dict=True)
         
         with torch.no_grad():
-            image2_outs = self.encode_image(image2, return_attn=True, return_feat = True, as_dict=True)
-        # [B, C]
-        image_x1, image_x2 = (image1_outs['image_x'], image2_outs['image_x'])
+            self._update_momentum_encoder(self.base_encoder, self.momentum_encoder, m)
+            
+            x2_outs = self.encode_image(x2, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
+            
+        image_x1, image_x2 = (x1_outs['image_x'], x2_outs['image_x'])
+        attn_dicts1, attn_dicts2 = (x1_outs['attn_dicts'], x2_outs['attn_dicts'])
+        image_feat1, image_feat2 = (x1_outs['image_feat'], x2_outs['image_feat'])
         
-        attn_dicts1, attn_dicts2 = (image1_outs['attn_dicts'], image2_outs['attn_dicts'])
-
-        # [B, G, C]        
-        image_feat1, image_feat2 = (image1_outs['image_feat'], image2_outs['image_feat'])
+        fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
+        fgbg_feat2 = self.get_fgbg_feat(x2, image_feat2, attn_dicts2)
         
-        fg_feat1, bg_feat1 = self.get_fgbg_feat(image1, image_feat1, attn_dicts1)
-        fg_feat2, bg_feat2 = self.get_fgbg_feat(image2, image_feat2, attn_dicts2)
+        return image_x1, image_x2, fgbg_feat1, fgbg_feat2
+    
         
-        fgbg_feat1 = torch.cat([fg_feat1, bg_feat1], dim=1)
-        fgbg_feat2 = torch.cat([fg_feat2, bg_feat2], dim=1)
+    def forward_train(self, image1, image2, text, m):
+        if self.network_style == "SimSiam":
+            image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.StopGradEncoder(image1, image2)
+        elif self.network_style == 'MoCo':
+            image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.MomentumEncoder(image1, image2, m)
+            
         
         text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
         text_x = text_outs['text_x']
         
         
-        losses = self.loss(image_x1, text_x)
+        losses = 0.5 * (self.loss(image_x1, text_x) + self.loss(image_x2, text_x))
         losses_dict = dict(loss=losses)
         
         losses_dict['fgbg_loss'] = self.fgbg_loss(fgbg_feat1, fgbg_feat2.detach())
@@ -635,36 +418,19 @@ class FgBgContrastive(nn.Module):
             image_multi_label_x = image_x1.unsqueeze(1)
             if self.multi_label:
                 text_multi_label_x = text_outs['text_multi_label_x']
-            if self.key_label:
+            elif self.key_label:
                 text_multi_label_x = text_outs['text_key']
             losses_dict['multi_label_loss'] = self.multi_label_loss(image_multi_label_x,
                                                                     text_multi_label_x) * self.multi_label_loss_weight
-            
-        
-            
-        if self.with_key_token:
-            
-            if self.multi_label:
-                text_multi_label_x = text_outs['text_multi_label_x'] # [B, 3, C]
-            if self.key_label:
-                text_multi_label_x = text_outs['text_key']
-            
-            key_feat, nonkey_feat = self.key_token_selection(image_feat1, text_multi_label_x)
-            losses_dict['key_loss'] = self.multi_label_key_loss(key_feat, nonkey_feat, text_multi_label_x)
-        
-        
-            
-            
-            
-            
+
         return losses_dict
 
     def forward_test(self, image, text):
         return self.zero_shot_pred(image, text)
 
-    def forward(self, image1, image2, text):
+    def forward(self, image1, image2, text, m):
         if self.training:
-            return self.forward_train(image1, image2, text)
+            return self.forward_train(image1, image2, text, m)
         else:
             return self.forward_test(image1, image2, text)
 
@@ -693,7 +459,7 @@ class FgBgContrastive(nn.Module):
     @torch.no_grad()
     def zero_shot_pred(self, image, text):
         # [B, C]
-        image_outs = self.encode_image(image)
+        image_outs = self.encode_image(image, encoder=self.base_encoder)
         image_features = image_outs[0]
         
         # [B, C]
@@ -704,3 +470,6 @@ class FgBgContrastive(nn.Module):
 
         return logits_per_image
 
+    def _update_momentum_encoder(self, base, momentum, m):
+        for param_b, param_m in zip(base.parameters(), momentum.parameters()):
+            param_m.data = param_m.data * m + param_b.data * (1. - m)
