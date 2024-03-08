@@ -401,7 +401,8 @@ class FgBgContrastive(nn.Module):
             image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.StopGradEncoder(image1, image2)
         elif self.network_style == 'MoCo':
             image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.MomentumEncoder(image1, image2, m)
-            
+        
+        print(fgbg_feat1.requires_grad)
         
         text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
