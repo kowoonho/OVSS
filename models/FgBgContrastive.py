@@ -388,12 +388,13 @@ class FgBgContrastive(nn.Module):
             
             x2_outs = self.encode_image(x2, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
             
-        image_x1, image_x2 = (x1_outs['image_x'], x2_outs['image_x'])
-        attn_dicts1, attn_dicts2 = (x1_outs['attn_dicts'], x2_outs['attn_dicts'])
-        image_feat1, image_feat2 = (x1_outs['image_feat'], x2_outs['image_feat'])
-        
+            image_x1, image_x2 = (x1_outs['image_x'], x2_outs['image_x'])
+            attn_dicts1, attn_dicts2 = (x1_outs['attn_dicts'], x2_outs['attn_dicts'])
+            image_feat1, image_feat2 = (x1_outs['image_feat'], x2_outs['image_feat'])
+            
+            fgbg_feat2 = self.get_fgbg_feat(x2, image_feat2, attn_dicts2)
+            
         fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
-        fgbg_feat2 = self.get_fgbg_feat(x2, image_feat2, attn_dicts2)
         
         return image_x1, image_x2, fgbg_feat1, fgbg_feat2
     
@@ -404,7 +405,6 @@ class FgBgContrastive(nn.Module):
         elif self.network_style == 'MoCo':
             image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.MomentumEncoder(image1, image2, m)
         
-        print(fgbg_feat2.requires_grad)
         
         text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
