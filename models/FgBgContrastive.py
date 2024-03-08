@@ -100,7 +100,7 @@ class FgBgContrastive(nn.Module):
                  with_multi_label_loss=False,
                  network_style='MoCo',
                  ):
-        super().__init__()
+        super(FgBgContrastive, self).__init__()
 
         self.base_encoder = MODELS.build(img_encoder)
         self.text_encoder = MODELS.build(text_encoder)
@@ -110,6 +110,12 @@ class FgBgContrastive(nn.Module):
         
         if network_style == 'MoCo':
             self.momentum_encoder = MODELS.build(img_encoder)
+            for param_q, param_k in zip(self.base_encoder.parameters(), self.momentum_encoder.parameters()):
+                param_k.data.copy_(param_q.data)
+                param_k.requires_grad = False
+
+            self.register_buffer("queue", torch.randn())
+            self.queue = F.normalize                
         
         
         
@@ -312,8 +318,8 @@ class FgBgContrastive(nn.Module):
         # [B, C]
         fg_feat, bg_feat = divide_group(image_feat, foreground_group_index)
         
-        # fg_feat = self.fgbg_projector(fg_feat)
-        # bg_feat = self.fgbg_projector(bg_feat)
+        fg_feat = self.fgbg_projector(fg_feat)
+        bg_feat = self.fgbg_projector(bg_feat)
         
         fgbg_feat = torch.cat([fg_feat.unsqueeze(1), bg_feat.unsqueeze(1)], dim=1)
         
@@ -381,20 +387,17 @@ class FgBgContrastive(nn.Module):
     
     def MomentumEncoder(self, x1, x2, m):
         x1_outs = self.encode_image(x1, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
+        image_x1, attn_dicts1, image_feat1 = (x1_outs['image_x'], x1_outs['attn_dicts'], x1_outs['image_feat'])
+        fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
         
         
         with torch.no_grad():
             self._update_momentum_encoder(self.base_encoder, self.momentum_encoder, m)
             
-            x2_outs = self.encode_image(x2, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
-            
-        image_x1, image_x2 = (x1_outs['image_x'], x2_outs['image_x'])
-        attn_dicts1, attn_dicts2 = (x1_outs['attn_dicts'], x2_outs['attn_dicts'])
-        image_feat1, image_feat2 = (x1_outs['image_feat'], x2_outs['image_feat'])
-        
-        fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
-        fgbg_feat2 = self.get_fgbg_feat(x2, image_feat2, attn_dicts2)
-        
+            x2_outs = self.encode_image(x2, encoder=self.momentum_encoder, return_attn=True, return_feat = True, as_dict=True)
+            image_x2, attn_dicts2, image_feat2 = (x2_outs['image_x'], x2_outs['attn_dicts'], x2_outs['image_feat'])
+            fgbg_feat2 = self.get_fgbg_feat(x2, image_feat2, attn_dicts2)
+
         return image_x1, image_x2, fgbg_feat1, fgbg_feat2
     
         
@@ -404,7 +407,6 @@ class FgBgContrastive(nn.Module):
         elif self.network_style == 'MoCo':
             image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.MomentumEncoder(image1, image2, m)
         
-        print(fgbg_feat2.requires_grad)
         
         text_outs = self.encode_text(text, as_dict=True, max_word=self.multi_label, key_label=self.key_label)
         # [B, C]
@@ -472,6 +474,7 @@ class FgBgContrastive(nn.Module):
         logits_per_image = image_features @ text.t()
 
         return logits_per_image
+    
 
     def _update_momentum_encoder(self, base, momentum, m):
         for param_b, param_m in zip(base.parameters(), momentum.parameters()):
