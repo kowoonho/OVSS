@@ -362,6 +362,7 @@ class FgBgContrastive(nn.Module):
 
         return outs.as_return()
     
+    
     def StopGradEncoder(self, x1, x2):
         x1_outs = self.encode_image(x1, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
         
@@ -408,7 +409,7 @@ class FgBgContrastive(nn.Module):
         text_x = text_outs['text_x']
         
         
-        losses = 0.5 * (self.loss(image_x1, text_x) + self.loss(image_x2, text_x))
+        losses = (self.loss(image_x1, text_x))
         losses_dict = dict(loss=losses)
         
         losses_dict['fgbg_loss'] = self.fgbg_loss(fgbg_feat1, fgbg_feat2.detach())
