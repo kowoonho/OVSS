@@ -111,9 +111,9 @@ class FgBgContrastive(nn.Module):
         
         if network_style == 'MoCo':
             self.momentum_encoder = MODELS.build(img_encoder)
-            for param_q, param_k in zip(self.base_encoder.parameters(), self.momentum_encoder.parameters()):
-                param_k.data.copy_(param_q.data)
-                param_k.requires_grad = False
+            # for param_q, param_k in zip(self.base_encoder.parameters(), self.momentum_encoder.parameters()):
+            #     param_k.data.copy_(param_q.data)
+            #     param_k.requires_grad = False
 
             self.K = K
             self.register_buffer("queue", torch.randn(output_dim, K))
@@ -375,14 +375,12 @@ class FgBgContrastive(nn.Module):
     
     def StopGradEncoder(self, x1, x2):
         x1_outs = self.encode_image(x1, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
+        image_x1, attn_dicts1, image_feat1 = (x1_outs['image_x'], x1_outs['attn_dicts'], x1_outs['image_feat'])
+        fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
         
         with torch.no_grad():
             x2_outs = self.encode_image(x2, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
-
-            image_x1, image_x2 = (x1_outs['image_x'], x2_outs['image_x'])
-            attn_dicts1, attn_dicts2 = (x1_outs['attn_dicts'], x2_outs['attn_dicts'])
-            image_feat1, image_feat2 = (x1_outs['image_feat'], x2_outs['image_feat'])
-            
+            image_x2, attn_dicts2, image_feat2 = (x2_outs['image_x'], x2_outs['attn_dicts'], x2_outs['image_feat'])
             fgbg_feat2 = self.get_fgbg_feat(x2, image_feat2, attn_dicts2)
             
         fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
