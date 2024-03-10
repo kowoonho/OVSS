@@ -1,7 +1,7 @@
 data:
-  batch_size: 128
+  batch_size: 128 # it should be bigger than 16
   pin_memory: true
-  num_workers: 10
+  num_workers: 8
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -43,6 +43,7 @@ data:
       - imagenet
 
   img_aug:
+    separate_aug: true
     deit_aug: true
     img_size: 224
     img_scale: [0.08, 1.0]
@@ -57,6 +58,8 @@ data:
     multi_label: 3
     key_label: 0
     word_type: ['noun'] # list
+
+  imc: True # Intra-Modal-Contrastive
 
 train:
   start_epoch: 0
@@ -112,7 +115,7 @@ local_rank: ???
 vis: []
 
 model:
-  type: MultiLabelContrastive
+  type: FgBgContrastive
   img_encoder:
     type: GroupViT
     embed_dim: 384
@@ -128,14 +131,21 @@ model:
     width: 256
     layers: 12
     vocab_size: 49408
-  clip_encoder: 'ViT-B/32'
+  saliency_encoder:
+    type: FoundModel
+    vit_model: dino
+    vit_arch: vit_small
+    vit_patch_size: 8
+    enc_type_feats: k
+    bkg_type_feats: k
+    bkg_th: 0.3
+  saliency_decoder_weight: '/workspace/Dataset/pre-trained_weights/FOUND/decoder_weights.pt'
   contrast_temperature: 0.07
   proj_num_layers: 2
   output_dim: 256
   multi_label: ${data.text_aug.multi_label}
   key_label: ${data.text_aug.key_label}
   with_multi_label_loss: True
+  with_fgbg_loss: False
   with_key_token: True
-  with_hard_negative_sample: False
-  with_key_label: False
-  K: 16
+  network_style: None

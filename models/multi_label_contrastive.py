@@ -99,7 +99,7 @@ class MultiLabelContrastive(nn.Module):
                  K=16):
         super().__init__()
 
-        self.img_encoder = MODELS.build(img_encoder)
+        self.base_encoder = MODELS.build(img_encoder)
         self.text_encoder = MODELS.build(text_encoder)
 
         self.contrast_temperature = contrast_temperature
@@ -118,12 +118,17 @@ class MultiLabelContrastive(nn.Module):
         
         if proj_num_layers > 0:
             self.img_projector = ProjectMLP(
-                in_dim=self.img_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
+                in_dim=self.base_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
             self.text_projector = ProjectMLP(
                 in_dim=self.text_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
             self.img_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.img_projector)
             self.text_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.text_projector)
-
+            
+            self.keyfeat_projector = ProjectMLP()
+            self.nonkeyfeat_projector = ProjectMLP()
+            self.keyfeat_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.keyfeat_projector)
+            self.nonkeyfeat_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.nonkeyfeat_projector)
+            
         else:
             self.img_projector = nn.Identity()
             self.text_projector = nn.Identity()
@@ -333,7 +338,7 @@ class MultiLabelContrastive(nn.Module):
                                             anchor_feat=multi_label_text_feat[:,i,:].unsqueeze(1))
         return key_loss / (text_len)
     
-    def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.8):
+    def key_token_selection(self, image_feat, text_multi_label_feat, threshold=0.5):
         B, G, C = image_feat.shape
         _, T, _ = text_multi_label_feat.shape
         
@@ -372,37 +377,13 @@ class MultiLabelContrastive(nn.Module):
         
         nonkey_feat = nonkey_masked_sum / nonkey_masked_count
         
+        
+        
         return key_feat, nonkey_feat
-    
-    # def key_token_selection(self, image_feat, text_multi_label_feat):
-    #     B, G, C = image_feat.shape
-    #     _, T, _ = text_multi_label_feat.shape
-        
-    #     image_feat = F.normalize(image_feat, dim=-1)
-    #     text_feat = F.normalize(text_multi_label_feat, dim=-1)
-        
-    #     token_score = image_feat @ rearrange(text_feat, 'b l c -> b c l') # [B, G, T]
-        
-    #     token_score = F.normalize(token_score, dim=-1)
-        
-    #     attention_weight = F.softmax(token_score, dim=-1)
-    #     inverse_attention_weight = 1 - attention_weight
-        
-    #     # [B, G, T, C]
-    #     attention_score = attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
-        
-    #     inverse_attention_score = inverse_attention_weight.unsqueeze(-1) * image_feat.unsqueeze(2)
-        
-        
-    #     key_feat = attention_score.mean(dim=1)
-        
-    #     nonkey_feat = inverse_attention_score.mean(dim=1)
-        
-    #     return key_feat, nonkey_feat
         
     def encode_image(self, image, *, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
+        img_outs = self.base_encoder(image, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         
@@ -473,16 +454,16 @@ class MultiLabelContrastive(nn.Module):
         final_label = (group_final_score * text_label) + torch.eye(8, dtype=text_label.dtype, device=text_label.device)
         return final_label
         
-    def select_keyword(self, texts):
-        B, T, C = texts.shape
+    # def select_keyword(self, texts):
+    #     B, T, C = texts.shape
         
-        texts = texts.reshape(-1, C)
+    #     texts = texts.reshape(-1, C)
         
-        distances = np.sqrt(((text_embs.cpu().detach().numpy() - kmeans.cluster_centers_[:, np.newaxis])**2).sum(axis=2))
+    #     distances = np.sqrt(((text_embs.cpu().detach().numpy() - kmeans.cluster_centers_[:, np.newaxis])**2).sum(axis=2))
         
-        closest_data_points = np.argmin(distances, axis = 1)
+    #     closest_data_points = np.argmin(distances, axis = 1)
         
-        return texts[closest_data_points]
+    #     return texts[closest_data_points]
     
     def key_label_loss(self, image_feat, key_text_feat):
         
