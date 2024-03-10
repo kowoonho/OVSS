@@ -99,6 +99,7 @@ class FgBgContrastive(nn.Module):
                  multi_label_loss_weight=1.0,
                  with_multi_label_loss=False,
                  network_style='MoCo',
+                 K=65536,
                  ):
         super(FgBgContrastive, self).__init__()
 
@@ -114,8 +115,11 @@ class FgBgContrastive(nn.Module):
                 param_k.data.copy_(param_q.data)
                 param_k.requires_grad = False
 
-            self.register_buffer("queue", torch.randn())
-            self.queue = F.normalize                
+            self.K = K
+            self.register_buffer("queue", torch.randn(output_dim, K))
+            self.queue = F.normalize(self.queue, dim=0)
+            
+            self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
         
         
         
@@ -475,7 +479,20 @@ class FgBgContrastive(nn.Module):
 
         return logits_per_image
     
-
+    @torch.no_grad()
+    def _dequeue_and_enqueue(self, keys):
+        keys = dist_collect(keys)
+        
+        B = keys.shape[0]
+        ptr= int(self.queue_ptr)
+        assert self.K % B == 0 # for simplicity
+        
+        self.queue[:, ptr:ptr+B] = keys.T
+        ptr = (ptr + B) % self.K
+        
+        self.queue_ptr[0] = ptr
+        
+    
     def _update_momentum_encoder(self, base, momentum, m):
         for param_b, param_m in zip(base.parameters(), momentum.parameters()):
             param_m.data = param_m.data * m + param_b.data * (1. - m)
