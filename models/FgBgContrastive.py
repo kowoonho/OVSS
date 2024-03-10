@@ -101,7 +101,7 @@ class FgBgContrastive(nn.Module):
                  with_fgbg_loss=False,
                  with_key_token=False,
                  network_style='MoCo',
-                 K=65536,
+                 K=16384,
                  ):
         super(FgBgContrastive, self).__init__()
 
@@ -120,8 +120,8 @@ class FgBgContrastive(nn.Module):
             #     param_k.requires_grad = False
 
             self.K = K
-            self.register_buffer("queue", torch.randn(output_dim, K))
-            self.queue = F.normalize(self.queue, dim=0)
+            self.register_buffer("queue", torch.randn(K, 2, output_dim))
+            self.queue = F.normalize(self.queue, dim=-1)
             
             self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
         
@@ -185,7 +185,7 @@ class FgBgContrastive(nn.Module):
 
         logits_per_img = image_x @ dist_collect(text_x).t()
         logits_per_text = text_x @ dist_collect(image_x).t()
-
+        
         logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
         loss_img = self.cross_entropy(logits_per_img * logit_scale, labels)
         loss_text = self.cross_entropy(logits_per_text * logit_scale, labels)
@@ -334,6 +334,39 @@ class FgBgContrastive(nn.Module):
                                             anchor_feat=multi_label_text_feat[:,i,:].unsqueeze(1))
         return key_loss / (text_len)
     
+    def momentum_fgbg_loss(self, fgbg_feat1, fgbg_feat2):
+        
+        # [B, 2, C]
+        fgbg_feat1 = F.normalize(fgbg_feat1, dim=-1)
+        fgbg_feat2 = F.normalize(fgbg_feat2, dim=-1)
+        
+        if self.share_temperature:
+            logit_scale = torch.clamp(self.logit_scale.exp(), max=100)
+        else:
+            logit_scale = torch.clamp(self.multi_label_logit_scale.exp(), max=100)
+        
+        fgbg_x1 = rearrange(fgbg_feat1, 'b l c -> (b l) c')
+        fgbg_x2 = rearrange(fgbg_feat2, 'b l c -> (b l) c')
+        
+        l_pos = torch.einsum("nc,nc->n", [fgbg_x1, fgbg_x2]).unsqueeze(-1)
+        l_neg = torch.einsum("nc,ck->nk", [fgbg_x1, rearrange(self.queue.clone().detach(), 'b l c -> (b l) c').T])
+        
+        B, K = l_neg.shape
+        
+        logits = torch.cat([l_pos, l_neg], dim=1)
+        
+        pos_label = torch.ones((B, 1), dtype=torch.long, device = fgbg_x1.device)
+        neg_label = torch.zeros((B, K), dtype=torch.long, device = fgbg_x1.device)
+        
+        labels = torch.cat([pos_label, neg_label], dim=1)
+        
+        loss = self.soft_cross_entropy(logits * logit_scale, labels)
+        
+        self._dequeue_and_enqueue(fgbg_feat2)
+        
+        return loss
+        
+        
     def fgbg_loss(self, fgbg_feat1, fgbg_feat2):
 
         # [B, 2, C]
@@ -514,14 +547,14 @@ class FgBgContrastive(nn.Module):
             
         return image_x1, image_x2, fgbg_feat1, fgbg_feat2
     
-    def MomentumEncoder(self, x1, x2, m):
+    def MomentumEncoder(self, x1, x2):
         x1_outs = self.encode_image(x1, encoder=self.base_encoder, return_attn=True, return_feat = True, as_dict=True)
         image_x1, attn_dicts1, image_feat1 = (x1_outs['image_x'], x1_outs['attn_dicts'], x1_outs['image_feat'])
         fgbg_feat1 = self.get_fgbg_feat(x1, image_feat1, attn_dicts1)
         
         
         with torch.no_grad():
-            self._update_momentum_encoder(self.base_encoder, self.momentum_encoder, m)
+            self._update_momentum_encoder(self.base_encoder, self.momentum_encoder)
             
             x2_outs = self.encode_image(x2, encoder=self.momentum_encoder, return_attn=True, return_feat = True, as_dict=True)
             image_x2, attn_dicts2, image_feat2 = (x2_outs['image_x'], x2_outs['attn_dicts'], x2_outs['image_feat'])
@@ -530,10 +563,10 @@ class FgBgContrastive(nn.Module):
         return image_x1, image_x2, fgbg_feat1, fgbg_feat2
     
         
-    def forward_train(self, image1, image2, text, m):
+    def forward_train(self, image1, image2, text):
             
         if self.network_style == 'MoCo':
-            image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.MomentumEncoder(image1, image2, m)
+            image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.MomentumEncoder(image1, image2)
         elif self.network_style == "SimSiam":
             image_x1, image_x2, fgbg_feat1, fgbg_feat2 = self.StopGradEncoder(image1, image2)
         elif not self.with_fgbg_loss:
@@ -563,7 +596,10 @@ class FgBgContrastive(nn.Module):
                                                                     text_multi_label_x) * self.multi_label_loss_weight
 
         if self.with_fgbg_loss:
-            losses_dict['fgbg_loss'] = self.fgbg_loss(fgbg_feat1, fgbg_feat2.detach())
+            if self.network_style == "MoCo":
+                losses_dict['fgbg_loss'] = self.momentum_fgbg_loss(fgbg_feat1, fgbg_feat2.detach())
+            else: 
+                losses_dict['fgbg_loss'] = self.fgbg_loss(fgbg_feat1, fgbg_feat2.detach())
             
         if self.with_key_token:
             if self.multi_label:
@@ -574,16 +610,14 @@ class FgBgContrastive(nn.Module):
             key_feat, nonkey_feat = self.key_token_selection(image_feat1, text_multi_label_x)
             losses_dict['key_loss'] = self.multi_label_key_loss(key_feat, nonkey_feat, text_multi_label_x)
             
-        
-            
         return losses_dict
 
     def forward_test(self, image, text):
         return self.zero_shot_pred(image, text)
 
-    def forward(self, image1, image2, text, m):
+    def forward(self, image1, image2, text):
         if self.training:
-            return self.forward_train(image1, image2, text, m)
+            return self.forward_train(image1, image2, text)
         else:
             return self.forward_test(image1, image2, text)
 
@@ -631,12 +665,12 @@ class FgBgContrastive(nn.Module):
         ptr= int(self.queue_ptr)
         assert self.K % B == 0 # for simplicity
         
-        self.queue[:, ptr:ptr+B] = keys.T
+        self.queue[ptr:ptr+B] = keys
         ptr = (ptr + B) % self.K
         
         self.queue_ptr[0] = ptr
         
     
-    def _update_momentum_encoder(self, base, momentum, m):
+    def _update_momentum_encoder(self, base, momentum, m=0.999):
         for param_b, param_m in zip(base.parameters(), momentum.parameters()):
             param_m.data = param_m.data * m + param_b.data * (1. - m)

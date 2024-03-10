@@ -163,10 +163,10 @@ def divide_group(groups_feat, foreground_group_index):
     return fg_feat, bg_feat
 
 
-def adjust_moco_momentum(epoch, total_epoch=30, momentum=0.99):
-    """Adjust moco momentum based on current epoch"""
-    m = 1. - 0.5 * (1. + math.cos(math.pi * epoch / total_epoch)) * (1. - momentum)
-    return m
+# def adjust_moco_momentum(epoch, total_epoch=30, momentum=0.999):
+#     """Adjust moco momentum based on current epoch"""
+#     m = 1. - 0.5 * (1. + math.cos(math.pi * epoch / total_epoch)) * (1. - momentum)
+#     return m
 
     
     

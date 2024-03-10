@@ -238,13 +238,12 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
     
     memory_refresh_idx = [refresh_term, refresh_term*2, refresh_term*3]
     
-    m = adjust_moco_momentum(epoch, total_epoch=config.train.epochs)
     
     for idx, samples in enumerate(data_loader):
         gc.collect()
         
         batch_size = config.data.batch_size
-        losses = model(**samples, m=m)
+        losses = model(**samples)
         
         loss, log_vars = parse_losses(losses)
         if torch.isnan(loss) == False:
