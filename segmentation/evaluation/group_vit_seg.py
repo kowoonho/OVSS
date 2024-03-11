@@ -153,7 +153,7 @@ class GroupViTSegInference(EncoderDecoder):
         Returns:
             attn_maps: list[Tensor], attention map of shape [B, H, W, groups]
         """
-        results = self.model.base_encoder(img, return_attn=True, as_dict=True)
+        results = self.model.img_encoder(img, return_attn=True, as_dict=True)
         if fgbg == False:
             attn_results = results['attn_dicts']
         else:
@@ -208,7 +208,7 @@ class GroupViTSegInference(EncoderDecoder):
         # [H, W, G], select batch idx 0
         attn_map = attn_map[0]
 
-        img_outs = self.model.encode_image(img, encoder=self.model.base_encoder, return_feat=True, as_dict=True)
+        img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
         # [B, L, C] -> [L, C]
         grouped_img_tokens = img_outs['image_feat'].squeeze(0)
         
@@ -406,7 +406,7 @@ class GroupViTSegInference(EncoderDecoder):
         assert img.shape[0] == 1, 'batch size must be 1'
         attn_map = attn_map[0]
 
-        img_outs = self.model.encode_image(img, encoder=self.model.base_encoder, return_feat=True, as_dict=True)
+        img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
         # [B, L, C] -> [L, C]
         grouped_img_tokens = img_outs['image_feat'].squeeze(0)
         
@@ -452,7 +452,7 @@ class GroupViTSegInference(EncoderDecoder):
             os.makedirs(out_dir)
         attn_map = self.get_attn_maps(img, rescale=True)[-1]
         
-        img_outs = self.model.encode_image(img, encoder=self.model.base_encoder, return_feat=True, as_dict=True)
+        img_outs = self.model.encode_image(img, return_feat=True, as_dict=True)
         # [B, L, C] -> [L, C]
         grouped_img_tokens = img_outs['image_feat'].squeeze(0)
         

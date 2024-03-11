@@ -1,7 +1,7 @@
 data:
   batch_size: 128 # it should be bigger than 16
   pin_memory: true
-  num_workers: 12
+  num_workers: 8
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -147,5 +147,6 @@ model:
   key_label: ${data.text_aug.key_label}
   with_multi_label_loss: True
   with_fgbg_loss: True
-  with_key_token: False
-  network_style: MoCo
+  with_key_token_loss: False
+  network_style: "MoCo"
+  K: 16384 # queue size
