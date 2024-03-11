@@ -49,7 +49,6 @@ from timm.utils import AverageMeter, accuracy
 from utility import (auto_resume_helper, build_dataset_class_tokens, build_optimizer, build_scheduler, data2cuda,
                    get_config, get_grad_norm, get_logger, load_checkpoint, parse_losses, reduce_tensor, save_checkpoint)
 
-from utility.myutils import adjust_moco_momentum
 from metric.evaluate import evalutate
 
 import gc
