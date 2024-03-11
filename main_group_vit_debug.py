@@ -242,7 +242,6 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler):
         
         batch_size = config.data.batch_size
         losses = model(**samples)
-        
         loss, log_vars = parse_losses(losses)
         if torch.isnan(loss) == False:
             loss_meter.update(loss.item(), batch_size)

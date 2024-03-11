@@ -99,7 +99,7 @@ class MultiLabelContrastive(nn.Module):
                  K=16):
         super().__init__()
 
-        self.base_encoder = MODELS.build(img_encoder)
+        self.img_encoder = MODELS.build(img_encoder)
         self.text_encoder = MODELS.build(text_encoder)
 
         self.contrast_temperature = contrast_temperature
@@ -118,7 +118,7 @@ class MultiLabelContrastive(nn.Module):
         
         if proj_num_layers > 0:
             self.img_projector = ProjectMLP(
-                in_dim=self.base_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
+                in_dim=self.img_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
             self.text_projector = ProjectMLP(
                 in_dim=self.text_encoder.width, num_layers=proj_num_layers, out_dim=output_dim)
             self.img_projector = nn.SyncBatchNorm.convert_sync_batchnorm(self.img_projector)
@@ -383,7 +383,7 @@ class MultiLabelContrastive(nn.Module):
         
     def encode_image(self, image, *, return_feat=False, as_dict=False):
         outs = Result(as_dict)
-        img_outs = self.base_encoder(image, return_feat=return_feat, as_dict=True)
+        img_outs = self.img_encoder(image, return_feat=return_feat, as_dict=True)
         
         outs.append(self.img_projector(img_outs['x']), 'image_x')
         

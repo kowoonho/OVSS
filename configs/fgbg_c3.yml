@@ -146,4 +146,4 @@ model:
   multi_label: ${data.text_aug.multi_label}
   key_label: ${data.text_aug.key_label}
   with_multi_label_loss: True
-  network_style: SimSiam
+  with_key_token: False
