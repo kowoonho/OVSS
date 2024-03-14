@@ -198,10 +198,10 @@ def build_img_transform(is_train, config, with_dc=True):
         augmentation1 = transforms.Compose([
             transforms.RandomResizedCrop(224, scale=config.img_scale),
             transforms.RandomApply([
-                transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)  # not strengthened
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
             ], p=0.8),
             transforms.RandomGrayscale(p=0.2),
-            transforms.RandomApply([GaussianBlur([.1, 2.])], p=1.0),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)
@@ -209,11 +209,10 @@ def build_img_transform(is_train, config, with_dc=True):
         augmentation2 = transforms.Compose([
             transforms.RandomResizedCrop(224, scale=config.img_scale),
             transforms.RandomApply([
-                transforms.ColorJitter(0.4, 0.4, 0.2, 0.1)  # not strengthened
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
             ], p=0.8),
             transforms.RandomGrayscale(p=0.2),
-            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.1),
-            transforms.RandomApply([Solarize()], p=0.2),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD)

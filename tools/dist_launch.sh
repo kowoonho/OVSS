@@ -9,13 +9,13 @@
 #
 # Written by Jiarui Xu
 # -------------------------------------------------------------------------
-export CUDA_VISIBLE_DEVICES=1,2,3,4
+export CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7,8
 # export OMP_NUM_THREADS=2
 
 SCRIPT=$1
 CONFIG=$2
 GPUS=$3
-PORT=${PORT:-29800}
+PORT=${PORT:-29600}
 
 
 PYTHONPATH="$(dirname $0)/..":$PYTHONPATH \

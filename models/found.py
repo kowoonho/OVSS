@@ -99,6 +99,7 @@ class FoundModel(nn.Module):
         x = nn.functional.pad(x, (0, pad_w, 0, pad_h), value=0)
         return x
     
+    @torch.no_grad()
     def get_binary_result(self, batch, decoder=None):
         preds, _, _, _ = self.forward_step(batch, decoder=decoder, for_eval=True)
         

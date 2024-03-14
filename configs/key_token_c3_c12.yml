@@ -37,7 +37,7 @@ data:
         length: 50000
     train:
       - gcc3m
-      # - gcc12m
+      - gcc12m
       # - yfcc14m
     val:
       - imagenet
@@ -63,7 +63,7 @@ data:
 
 train:
   start_epoch: 0
-  epochs: 30
+  epochs: 40
   warmup_epochs: 2
   base_lr: 1.6e-3
   weight_decay: 0.05
@@ -146,7 +146,7 @@ model:
   multi_label: ${data.text_aug.multi_label}
   key_label: ${data.text_aug.key_label}
   with_multi_label_loss: True
-  with_fgbg_loss: True
-  with_key_token_loss: False
-  network_style: "MoCo"
-  K: 32768 # queue size
+  with_fgbg_loss: False
+  with_key_token_loss: True
+  network_style: None
+  K: 0

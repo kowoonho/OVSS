@@ -120,9 +120,10 @@ class FgBgContrastive(nn.Module):
             self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
             
         self.text_encoder = MODELS.build(text_encoder)
-        self.saliency_encoder = MODELS.build(saliency_encoder)
-        self.saliency_encoder.decoder_load_weights(weights_path=saliency_decoder_weight)
-        self.saliency_encoder.eval()
+        if with_fgbg_loss:
+            self.saliency_encoder = MODELS.build(saliency_encoder)
+            self.saliency_encoder.decoder_load_weights(weights_path=saliency_decoder_weight)
+            self.saliency_encoder.eval()
         
         
         
