@@ -167,7 +167,7 @@ class MultiLabelContrastive(nn.Module):
 
         return loss
 
-    def multi_label_loss(self, image_feat, text_feat, bg = False):
+    def multi_label_loss(self, image_feat, text_feat):
         """
 
         Args:

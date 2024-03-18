@@ -1,7 +1,7 @@
 data:
-  batch_size: 8 # it should be bigger than 16
+  batch_size: 128 # it should be bigger than 16
   pin_memory: true
-  num_workers: 4
+  num_workers: 8
   # Thomas said it should be at least about 5-10x your batch size; beyond that,
   # the differences become academic.
   shuffle_buffer: 10000
@@ -110,7 +110,7 @@ output: ???
 tag: default
 print_freq: 10
 seed: 0
-wandb: true
+wandb: false
 local_rank: ???
 vis: []
 
@@ -146,7 +146,7 @@ model:
   multi_label: ${data.text_aug.multi_label}
   key_label: ${data.text_aug.key_label}
   with_multi_label_loss: True
-  with_key_token: False
-  with_hard_negative_sample: False
-  with_key_label: False
-  K: 16
+  with_fgbg_loss: False
+  with_key_token_loss: True
+  network_style: None
+  K: 0

@@ -128,7 +128,6 @@ model:
     width: 256
     layers: 12
     vocab_size: 49408
-  clip_encoder: 'ViT-B/32'
   contrast_temperature: 0.07
   proj_num_layers: 2
   output_dim: 256

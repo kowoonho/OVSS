@@ -122,7 +122,7 @@ def seg2coord(seg_map):
 
 class GroupViTSegInference(EncoderDecoder):
 
-    def __init__(self, model, text_embedding, with_bg, test_cfg=dict(mode='whole', bg_thresh=.95)):
+    def __init__(self, model, text_embedding, with_bg, test_cfg=dict(mode='whole', bg_thresh=.90)):
         super(EncoderDecoder, self).__init__()
         if not isinstance(test_cfg, mmcv.Config):
             test_cfg = mmcv.Config(test_cfg)
